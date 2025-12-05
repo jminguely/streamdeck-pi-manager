@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional
 
 from streamdeck_pi.core.button import Button, ButtonAction, ButtonActionType
 from streamdeck_pi.core.device import StreamDeckManager
+from streamdeck_pi.core.config import ConfigManager
 from streamdeck_pi.plugins.base import PluginManager
 
 router = APIRouter()
@@ -55,6 +56,11 @@ def get_device_manager(request: Request) -> StreamDeckManager:
 def get_plugin_manager(request: Request) -> PluginManager:
     """Get plugin manager from app state."""
     return request.app.state.plugin_manager
+
+
+def get_config_manager(request: Request) -> ConfigManager:
+    """Get config manager from app state."""
+    return request.app.state.config_manager
 
 
 def get_button_configs(request: Request) -> Dict[int, Button]:
@@ -145,7 +151,8 @@ async def update_button(
     config: ButtonConfigRequest,
     request: Request,
     device_manager: StreamDeckManager = Depends(get_device_manager),
-    plugin_manager: PluginManager = Depends(get_plugin_manager)
+    plugin_manager: PluginManager = Depends(get_plugin_manager),
+    config_manager: ConfigManager = Depends(get_config_manager)
 ):
     """Update button configuration."""
     if not device_manager.is_connected():
@@ -177,6 +184,7 @@ async def update_button(
     
     # Store configuration
     request.app.state.button_configs[key] = button
+    config_manager.save_buttons(request.app.state.button_configs)
     
     # Update button display
     if button.enabled and button.label:
@@ -191,10 +199,20 @@ async def update_button(
         # Register callback if action is configured
         if button.action and button.action.plugin_id:
             def button_callback(button_id: int):
+                # Get latest button config
+                current_button = request.app.state.button_configs.get(button_id)
+                if not current_button:
+                    return
+                    
                 plugin_manager.execute_plugin(
-                    button.action.plugin_id,
+                    current_button.action.plugin_id,
                     button_id,
-                    config=button.action.config
+                    config=current_button.action.config,
+                    context={
+                        "bg_color": current_button.bg_color,
+                        "text_color": current_button.text_color,
+                        "font_size": current_button.font_size
+                    }
                 )
             
             device_manager.register_button_callback(key, button_callback)
@@ -209,7 +227,8 @@ async def update_button(
 async def clear_button(
     key: int,
     request: Request,
-    device_manager: StreamDeckManager = Depends(get_device_manager)
+    device_manager: StreamDeckManager = Depends(get_device_manager),
+    config_manager: ConfigManager = Depends(get_config_manager)
 ):
     """Clear button configuration."""
     if not device_manager.is_connected():
@@ -220,6 +239,7 @@ async def clear_button(
     
     if key in request.app.state.button_configs:
         del request.app.state.button_configs[key]
+        config_manager.save_buttons(request.app.state.button_configs)
     
     return {"status": "cleared"}
 

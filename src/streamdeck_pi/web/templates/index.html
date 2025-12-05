@@ -1,145 +1,179 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Stream Deck Pi Manager</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css" />
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-</head>
-<body>
+  </head>
+  <body>
     {% raw %}
     <div id="app">
-        <header>
-            <h1>🎮 Stream Deck Pi Manager</h1>
-            <div class="device-info" v-if="deviceInfo">
-                <span class="badge" :class="deviceInfo.connected ? 'badge-success' : 'badge-danger'">
-                    {{ deviceInfo.connected ? 'Connected' : 'Disconnected' }}
-                </span>
-                <span>{{ deviceInfo.type }}</span>
-                <span>Serial: {{ deviceInfo.serial }}</span>
+      <header>
+        <h1>🎮 Stream Deck Pi Manager</h1>
+        <div class="device-info" v-if="deviceInfo">
+          <span
+            class="badge"
+            :class="deviceInfo.connected ? 'badge-success' : 'badge-danger'"
+          >
+            {{ deviceInfo.connected ? 'Connected' : 'Disconnected' }}
+          </span>
+          <span>{{ deviceInfo.type }}</span>
+          <span>Serial: {{ deviceInfo.serial }}</span>
+        </div>
+      </header>
+
+      <main>
+        <div class="controls">
+          <div class="control-group">
+            <label for="brightness">Brightness</label>
+            <input
+              id="brightness"
+              type="range"
+              min="0"
+              max="100"
+              v-model="brightness"
+              @input="updateBrightness"
+            />
+            <span>{{ brightness }}%</span>
+          </div>
+
+          <button @click="reconnectDevice" class="btn btn-secondary">
+            Reconnect Device
+          </button>
+
+          <button @click="loadButtons" class="btn btn-primary">Refresh</button>
+        </div>
+
+        <div class="streamdeck-grid" v-if="deviceInfo">
+          <div
+            v-for="button in buttons"
+            :key="button.key"
+            class="button-slot"
+            :class="{ 'button-active': button.enabled, 'button-inactive': !button.enabled }"
+            @click="editButton(button)"
+          >
+            <div class="button-key">{{ button.key }}</div>
+            <div class="button-label">{{ button.label || 'Empty' }}</div>
+            <div
+              class="button-plugin"
+              v-if="button.action && button.action.plugin_id"
+            >
+              {{ getPluginName(button.action.plugin_id) }}
             </div>
-        </header>
+          </div>
+        </div>
 
-        <main>
-            <div class="controls">
-                <div class="control-group">
-                    <label for="brightness">Brightness</label>
-                    <input 
-                        id="brightness" 
-                        type="range" 
-                        min="0" 
-                        max="100" 
-                        v-model="brightness"
-                        @input="updateBrightness"
-                    >
-                    <span>{{ brightness }}%</span>
-                </div>
-
-                <button @click="reconnectDevice" class="btn btn-secondary">
-                    Reconnect Device
-                </button>
-
-                <button @click="loadButtons" class="btn btn-primary">
-                    Refresh
-                </button>
+        <!-- Button Editor Modal -->
+        <div class="modal" v-if="editingButton" @click.self="closeEditor">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Edit Button {{ editingButton.key }}</h2>
+              <button class="close" @click="closeEditor">&times;</button>
             </div>
 
-            <div class="streamdeck-grid" v-if="deviceInfo">
-                <div 
-                    v-for="button in buttons" 
-                    :key="button.key"
-                    class="button-slot"
-                    :class="{ 'button-active': button.enabled, 'button-inactive': !button.enabled }"
-                    @click="editButton(button)"
+            <div class="modal-body">
+              <div class="form-group">
+                <label>Label</label>
+                <input
+                  type="text"
+                  v-model="editingButton.label"
+                  class="form-control"
+                />
+              </div>
+
+              <div class="form-group">
+                <label>Plugin</label>
+                <select
+                  v-model="editingButton.selectedPlugin"
+                  class="form-control"
+                  @change="onPluginChange"
                 >
-                    <div class="button-key">{{ button.key }}</div>
-                    <div class="button-label">{{ button.label || 'Empty' }}</div>
-                    <div class="button-plugin" v-if="button.action && button.action.plugin_id">
-                        {{ getPluginName(button.action.plugin_id) }}
-                    </div>
+                  <option value="">None</option>
+                  <optgroup
+                    v-for="(pluginGroup, category) in pluginsByCategory"
+                    :label="category"
+                    :key="category"
+                  >
+                    <option
+                      v-for="plugin in pluginGroup"
+                      :value="plugin.id"
+                      :key="plugin.id"
+                    >
+                      {{ plugin.name }}
+                    </option>
+                  </optgroup>
+                </select>
+                <small v-if="selectedPluginInfo"
+                  >{{ selectedPluginInfo.description }}</small
+                >
+              </div>
+
+              <div
+                class="form-group"
+                v-if="selectedPluginInfo && selectedPluginInfo.config_schema.properties"
+              >
+                <h3>Plugin Configuration</h3>
+                <div
+                  v-for="(prop, key) in selectedPluginInfo.config_schema.properties"
+                  :key="key"
+                >
+                  <label>{{ key }}</label>
+                  <input
+                    v-if="prop.type === 'string'"
+                    type="text"
+                    v-model="editingButton.config[key]"
+                    :placeholder="prop.default || ''"
+                    class="form-control"
+                  />
+                  <input
+                    v-else-if="prop.type === 'integer'"
+                    type="number"
+                    v-model.number="editingButton.config[key]"
+                    class="form-control"
+                  />
+                  <small>{{ prop.description }}</small>
                 </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label>Font Size</label>
+                  <input
+                    type="number"
+                    v-model.number="editingButton.font_size"
+                    class="form-control"
+                  />
+                </div>
+
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" v-model="editingButton.enabled" />
+                    Enabled
+                  </label>
+                </div>
+              </div>
             </div>
 
-            <!-- Button Editor Modal -->
-            <div class="modal" v-if="editingButton" @click.self="closeEditor">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2>Edit Button {{ editingButton.key }}</h2>
-                        <button class="close" @click="closeEditor">&times;</button>
-                    </div>
-
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label>Label</label>
-                            <input type="text" v-model="editingButton.label" class="form-control">
-                        </div>
-
-                        <div class="form-group">
-                            <label>Plugin</label>
-                            <select v-model="editingButton.selectedPlugin" class="form-control" @change="onPluginChange">
-                                <option value="">None</option>
-                                <optgroup v-for="(pluginGroup, category) in pluginsByCategory" :label="category" :key="category">
-                                    <option v-for="plugin in pluginGroup" :value="plugin.id" :key="plugin.id">
-                                        {{ plugin.name }}
-                                    </option>
-                                </optgroup>
-                            </select>
-                            <small v-if="selectedPluginInfo">{{ selectedPluginInfo.description }}</small>
-                        </div>
-
-                        <div class="form-group" v-if="selectedPluginInfo && selectedPluginInfo.config_schema.properties">
-                            <h3>Plugin Configuration</h3>
-                            <div v-for="(prop, key) in selectedPluginInfo.config_schema.properties" :key="key">
-                                <label>{{ key }}</label>
-                                <input 
-                                    v-if="prop.type === 'string'"
-                                    type="text" 
-                                    v-model="editingButton.config[key]"
-                                    :placeholder="prop.default || ''"
-                                    class="form-control"
-                                >
-                                <input 
-                                    v-else-if="prop.type === 'integer'"
-                                    type="number" 
-                                    v-model.number="editingButton.config[key]"
-                                    class="form-control"
-                                >
-                                <small>{{ prop.description }}</small>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Font Size</label>
-                                <input type="number" v-model.number="editingButton.font_size" class="form-control">
-                            </div>
-
-                            <div class="form-group">
-                                <label>
-                                    <input type="checkbox" v-model="editingButton.enabled">
-                                    Enabled
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="modal-footer">
-                        <button @click="testButton" class="btn btn-secondary">Test</button>
-                        <button @click="clearButton" class="btn btn-danger">Clear</button>
-                        <button @click="saveButton" class="btn btn-primary">Save</button>
-                    </div>
-                </div>
+            <div class="modal-footer">
+              <button @click="testButton" class="btn btn-secondary">
+                Test
+              </button>
+              <button @click="clearButton" class="btn btn-danger">Clear</button>
+              <button @click="saveButton" class="btn btn-primary">Save</button>
             </div>
-        </main>
+          </div>
+        </div>
+      </main>
 
-        <footer>
-            <p>Stream Deck Pi Manager v1.0.0</p>
-        </footer>
+      <footer>
+        <p>Stream Deck Pi Manager v1.0.0</p>
+      </footer>
     </div>
     {% endraw %}
 
     <script src="/static/js/app.js"></script>
-</body>
+  </body>
 </html>

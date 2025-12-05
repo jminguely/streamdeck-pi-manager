@@ -27,6 +27,11 @@ class ButtonPlugin(ABC):
         """
         self.config = config or {}
         self.logger = logging.getLogger(f"{__name__}.{self.__class__.__name__}")
+        self.device_manager = None
+
+    def set_device_manager(self, device_manager):
+        """Set the device manager instance."""
+        self.device_manager = device_manager
     
     @abstractmethod
     def execute(self, button_id: int, context: Dict[str, Any] = None):
@@ -87,8 +92,9 @@ class ButtonPlugin(ABC):
 class PluginManager:
     """Manages plugin loading and execution."""
     
-    def __init__(self):
+    def __init__(self, device_manager=None):
         self.plugins: Dict[str, ButtonPlugin] = {}
+        self.device_manager = device_manager
     
     def register_plugin(self, plugin_class: type[ButtonPlugin]):
         """
@@ -98,6 +104,8 @@ class PluginManager:
             plugin_class: Plugin class to register
         """
         plugin = plugin_class()
+        if self.device_manager:
+            plugin.set_device_manager(self.device_manager)
         
         if not plugin.id:
             raise ValueError(f"Plugin {plugin_class.__name__} must have an 'id'")

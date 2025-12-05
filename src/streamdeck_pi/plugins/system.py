@@ -59,8 +59,19 @@ class CPUInfoPlugin(ButtonPlugin):
         
         self.logger.info(f"CPU: {cpu_percent}% | Temp: {temp}°C")
         
-        # This plugin would update the button display
-        # The web interface or device manager would handle the visual update
+        if self.device_manager:
+            text = f"CPU\n{cpu_percent}%"
+            if temp:
+                text += f"\n{temp}°C"
+                
+            self.device_manager.set_button_text(
+                button_id,
+                text,
+                font_size=context.get("font_size", 14) if context else 14,
+                bg_color=context.get("bg_color", (0, 0, 0)) if context else (0, 0, 0),
+                text_color=context.get("text_color", (255, 255, 255)) if context else (255, 255, 255)
+            )
+        
         return {
             "cpu_percent": cpu_percent,
             "temperature": temp
@@ -81,6 +92,17 @@ class MemoryInfoPlugin(ButtonPlugin):
         mem = psutil.virtual_memory()
         
         self.logger.info(f"Memory: {mem.percent}% used")
+        
+        if self.device_manager:
+            text = f"RAM\n{mem.percent}%"
+            
+            self.device_manager.set_button_text(
+                button_id,
+                text,
+                font_size=context.get("font_size", 14) if context else 14,
+                bg_color=context.get("bg_color", (0, 0, 0)) if context else (0, 0, 0),
+                text_color=context.get("text_color", (255, 255, 255)) if context else (255, 255, 255)
+            )
         
         return {
             "total": mem.total,
@@ -156,6 +178,17 @@ class DiskSpacePlugin(ButtonPlugin):
         disk = psutil.disk_usage(mount_point)
         
         self.logger.info(f"Disk {mount_point}: {disk.percent}% used")
+        
+        if self.device_manager:
+            text = f"Disk\n{disk.percent}%"
+            
+            self.device_manager.set_button_text(
+                button_id,
+                text,
+                font_size=context.get("font_size", 14) if context else 14,
+                bg_color=context.get("bg_color", (0, 0, 0)) if context else (0, 0, 0),
+                text_color=context.get("text_color", (255, 255, 255)) if context else (255, 255, 255)
+            )
         
         return {
             "total": disk.total,

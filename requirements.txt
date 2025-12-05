@@ -26,3 +26,5 @@ aiofiles>=23.0.0
 
 # WebSocket support
 websockets>=12.0
+requests>=2.31.0
+requests>=2.31.0
