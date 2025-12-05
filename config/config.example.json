@@ -1,0 +1,27 @@
+{
+  "web": {
+    "host": "0.0.0.0",
+    "port": 8888,
+    "ssl": false,
+    "ssl_cert": "/etc/streamdeck-pi/cert.pem",
+    "ssl_key": "/etc/streamdeck-pi/key.pem"
+  },
+  "device": {
+    "brightness": 50,
+    "timeout": 300,
+    "auto_reconnect": true
+  },
+  "security": {
+    "enabled": true,
+    "username": "admin",
+    "password_hash": "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewY5GyYIw3fgBzKa",
+    "session_timeout": 3600
+  },
+  "logging": {
+    "level": "INFO",
+    "file": "/var/log/streamdeck-pi/app.log",
+    "max_size": 10485760,
+    "backup_count": 5
+  },
+  "buttons": {}
+}
