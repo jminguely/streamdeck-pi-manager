@@ -74,7 +74,7 @@ async def get_device_info(device_manager: StreamDeckManager = Depends(get_device
     """Get Stream Deck device information."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
-    
+
     info = device_manager.get_device_info()
     return DeviceInfoResponse(
         type=info["type"],
@@ -103,10 +103,10 @@ async def set_brightness(
     """Set device brightness (0-100)."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
-    
+
     if not 0 <= level <= 100:
         raise HTTPException(status_code=400, detail="Brightness must be between 0 and 100")
-    
+
     device_manager.set_brightness(level)
     return {"brightness": level}
 
@@ -120,9 +120,9 @@ async def list_buttons(
     """List all buttons with their configurations."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
-    
+
     key_count = device_manager.device_info["key_count"]
-    
+
     buttons = []
     for key in range(key_count):
         if key in button_configs:
@@ -130,7 +130,7 @@ async def list_buttons(
         else:
             # Default empty button
             buttons.append(Button(key=key).to_dict())
-    
+
     return {"buttons": buttons}
 
 
@@ -157,10 +157,10 @@ async def update_button(
     """Update button configuration."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
-    
+
     if key >= device_manager.device_info["key_count"]:
         raise HTTPException(status_code=404, detail="Button not found")
-    
+
     # Create button action
     action = None
     if config.action_type != "none" and config.plugin_id:
@@ -169,7 +169,7 @@ async def update_button(
             plugin_id=config.plugin_id,
             config=config.config
         )
-    
+
     # Create button config
     button = Button(
         key=key,
@@ -181,11 +181,11 @@ async def update_button(
         font_size=config.font_size,
         enabled=config.enabled
     )
-    
+
     # Store configuration
     request.app.state.button_configs[key] = button
     config_manager.save_buttons(request.app.state.button_configs)
-    
+
     # Update button display
     if button.enabled and button.label:
         device_manager.set_button_text(
@@ -195,7 +195,7 @@ async def update_button(
             bg_color=button.bg_color,
             text_color=button.text_color
         )
-        
+
         # Register callback if action is configured
         if button.action and button.action.plugin_id:
             def button_callback(button_id: int):
@@ -203,7 +203,7 @@ async def update_button(
                 current_button = request.app.state.button_configs.get(button_id)
                 if not current_button:
                     return
-                    
+
                 plugin_manager.execute_plugin(
                     current_button.action.plugin_id,
                     button_id,
@@ -214,12 +214,12 @@ async def update_button(
                         "font_size": current_button.font_size
                     }
                 )
-            
+
             device_manager.register_button_callback(key, button_callback)
     else:
         device_manager.clear_button(key)
         device_manager.unregister_button_callback(key)
-    
+
     return button.to_dict()
 
 
@@ -233,14 +233,14 @@ async def clear_button(
     """Clear button configuration."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
-    
+
     device_manager.clear_button(key)
     device_manager.unregister_button_callback(key)
-    
+
     if key in request.app.state.button_configs:
         del request.app.state.button_configs[key]
         config_manager.save_buttons(request.app.state.button_configs)
-    
+
     return {"status": "cleared"}
 
 
@@ -253,7 +253,7 @@ async def press_button(
     """Simulate button press (for testing)."""
     if key not in button_configs:
         raise HTTPException(status_code=404, detail="Button not configured")
-    
+
     button = button_configs[key]
     if button.action and button.action.plugin_id:
         try:
@@ -265,7 +265,7 @@ async def press_button(
             return {"status": "executed"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
-    
+
     return {"status": "no action configured"}
 
 
@@ -274,7 +274,7 @@ async def press_button(
 async def list_plugins(plugin_manager: PluginManager = Depends(get_plugin_manager)):
     """List all available plugins."""
     plugins_data = plugin_manager.list_plugins()
-    
+
     return [
         PluginInfo(
             id=plugin_id,
@@ -297,7 +297,7 @@ async def get_plugin(
     plugin = plugin_manager.get_plugin(plugin_id)
     if not plugin:
         raise HTTPException(status_code=404, detail="Plugin not found")
-    
+
     return plugin.get_metadata()
 
 

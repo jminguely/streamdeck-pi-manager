@@ -54,7 +54,7 @@ def install_python_package():
     run_command([sys.executable, "-m", "pip", "install", "-e", "."])
 
 
-def create_config_directory():
+def create_config_directory(username):
     """Create configuration directory."""
     config_dir = Path("/etc/streamdeck-pi")
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -63,6 +63,11 @@ def create_config_directory():
     example_config = Path("config/config.example.json")
     if example_config.exists():
         shutil.copy(example_config, config_dir / "config.json")
+    
+    # Set ownership to the user
+    shutil.chown(config_dir, user=username, group=username)
+    for item in config_dir.glob("*"):
+        shutil.chown(item, user=username, group=username)
     
     print(f"Configuration directory created at {config_dir}")
 
@@ -147,7 +152,7 @@ def main():
     # Installation steps
     install_dependencies()
     install_python_package()
-    create_config_directory()
+    create_config_directory(username)
     setup_udev_rules()
     setup_sudo_permissions(username)
     create_systemd_service(username)
