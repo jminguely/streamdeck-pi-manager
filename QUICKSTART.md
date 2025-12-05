@@ -6,7 +6,7 @@
 
 ```bash
 cd ~
-git clone https://github.com/yourusername/streamdeck-pi-manager.git
+git clone https://github.com/jminguely/streamdeck-pi-manager.git
 cd streamdeck-pi-manager
 ```
 
@@ -16,7 +16,17 @@ cd streamdeck-pi-manager
 sudo python3 install.py
 ```
 
+> **Note for Raspberry Pi OS Bookworm or newer:**
+> If you encounter an `externally-managed-environment` error, run the installation with this environment variable:
+>
+> ```bash
+> sudo PIP_BREAK_SYSTEM_PACKAGES
+> ```
+
+````
+
 This will:
+
 - Install all system dependencies
 - Set up Python package
 - Configure udev rules
@@ -27,16 +37,18 @@ This will:
 
 ```bash
 sudo systemctl start streamdeck-pi
-```
+````
 
 ### 4. Access Web Interface
 
 Open your browser and navigate to:
+
 ```
 http://your-raspberry-pi-ip:8888
 ```
 
 Default login:
+
 - Username: `admin`
 - Password: `streamdeck`
 
@@ -81,6 +93,7 @@ The web interface will be available at `http://localhost:8888`
 ### Built-in Plugins
 
 **System Control:**
+
 - Shutdown
 - Reboot
 - CPU Info
@@ -89,6 +102,7 @@ The web interface will be available at `http://localhost:8888`
 - Disk Space
 
 **Network:**
+
 - Show IP Address
 - Network Speed
 - Toggle WiFi
@@ -159,5 +173,5 @@ sudo ufw status
 ## Support
 
 - 📖 [Full Documentation](docs/)
-- 🐛 [Report Issues](https://github.com/yourusername/streamdeck-pi-manager/issues)
-- 💬 [Community Discussions](https://github.com/yourusername/streamdeck-pi-manager/discussions)
+- 🐛 [Report Issues](https://github.com/jminguely/streamdeck-pi-manager/issues)
+- 💬 [Community Discussions](https://github.com/jminguely/streamdeck-pi-manager/discussions)

@@ -4,11 +4,15 @@ Stream Deck Pi Manager - Setup Script
 """
 from setuptools import setup, find_packages
 import os
+import re
 
 # Read version from __init__.py
-version = {}
-with open("src/streamdeck_pi/__init__.py") as f:
-    exec(f.read(), version)
+with open("src/streamdeck_pi/__init__.py", "r", encoding="utf-8") as f:
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]", f.read(), re.M)
+    if version_match:
+        version = version_match.group(1)
+    else:
+        raise RuntimeError("Unable to find version string.")
 
 # Read long description from README
 with open("README.md", "r", encoding="utf-8") as f:
@@ -16,7 +20,7 @@ with open("README.md", "r", encoding="utf-8") as f:
 
 setup(
     name="streamdeck-pi-manager",
-    version=version["__version__"],
+    version=version,
     author="Your Name",
     author_email="your.email@example.com",
     description="Web-based management interface for Elgato Stream Deck on Raspberry Pi",
