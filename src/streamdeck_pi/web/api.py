@@ -338,8 +338,6 @@ async def swap_buttons(
 
 @router.post("/buttons/move")
 async def move_button(
-@router.post("/buttons/move")
-async def move_button(
     req: MoveButtonRequest,
     deck_controller: DeckController = Depends(get_deck_controller)
 ):
