@@ -24,6 +24,13 @@ class DeckController:
             self.setup_callbacks()
             self.render_current_page()
             
+            # Debug device capabilities
+            if self.device.device:
+                logger.info(f"Device type: {self.device.device.deck_type()}")
+                logger.info(f"Has set_touchscreen_image: {hasattr(self.device.device, 'set_touchscreen_image')}")
+                logger.info(f"Has set_touchscreen_callback: {hasattr(self.device.device, 'set_touchscreen_callback')}")
+                logger.info(f"Key count: {self.device.device.key_count()}")
+            
     def stop(self):
         """Stop the controller."""
         self.device.disconnect()
@@ -37,11 +44,14 @@ class DeckController:
         # Register touch callback if available (for Neo)
         if hasattr(self.device.device, 'set_touchscreen_callback'):
             self.device.device.set_touchscreen_callback(self.on_touch)
+            logger.info("Registered touchscreen callback")
+        else:
+            logger.warning("Device does not support set_touchscreen_callback")
 
     def on_touch(self, deck, event):
         """Handle touch events."""
         # event is a dict with 'x', 'y', 'interaction' (press/release/drag)
-        logger.debug(f"Touch event: {event}")
+        logger.info(f"Touch event: {event}")
         
         x = event.get('x')
         interaction = event.get('interaction') # 'short' (tap), 'long', 'drag'
@@ -89,6 +99,7 @@ class DeckController:
         # Check if device supports touchscreen
         # This is a best-effort attempt to support Neo features
         if not hasattr(self.device.device, 'set_touchscreen_image'):
+            logger.warning("Device does not support set_touchscreen_image")
             return
 
         page = self.get_current_page()
@@ -103,19 +114,16 @@ class DeckController:
         total_pages = len(pages)
 
         # Create image for info screen
-        # Neo info screen is 360x100 px (approx, need to verify)
-        # Actually it's 248x58 or similar. Let's use a safe size or get it from device.
-        # The library might provide size.
-        
-        width = 360
-        height = 100
+        # Neo info screen is 248x58 px
+        width = 248
+        height = 58
         
         image = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(image)
         
         # Draw Page Title
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
         except:
             font = ImageFont.load_default()
             
@@ -141,6 +149,7 @@ class DeckController:
 
     def on_key_press(self, key: int):
         """Handle key press."""
+        logger.info(f"Key pressed: {key}")
         page = self.get_current_page()
         if not page:
             return
