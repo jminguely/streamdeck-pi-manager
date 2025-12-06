@@ -104,6 +104,8 @@ createApp({
         await this.loadButtons();
       } catch (error) {
         console.error('Failed to switch page:', error);
+      }
+    },
     async createPage() {
           if (!this.newPageTitle) return;
           try {
@@ -147,19 +149,17 @@ createApp({
           }
         },
     async deletePage(pageId) {
-        },
-    async deletePage(pageId) {
-          if (!confirm('Are you sure you want to delete this page?')) return;
-          try {
-            await axios.delete(`/api/v1/pages/${pageId}`);
-            await this.loadPages();
-            if (this.pages.length > 0) {
-              await this.switchPage(this.pages[0].id);
-            }
-          } catch (error) {
-            console.error('Failed to delete page:', error);
-          }
-        },
+      if (!confirm('Are you sure you want to delete this page?')) return;
+      try {
+        await axios.delete(`/api/v1/pages/${pageId}`);
+        await this.loadPages();
+        if (this.pages.length > 0) {
+          await this.switchPage(this.pages[0].id);
+        }
+      } catch (error) {
+        console.error('Failed to delete page:', error);
+      }
+    },
         editButton(button) {
           // Create a copy for editing
           this.editingButton = {
