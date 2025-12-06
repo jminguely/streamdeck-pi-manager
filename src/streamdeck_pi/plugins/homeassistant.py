@@ -16,14 +16,6 @@ class HomeAssistantPlugin(ButtonPlugin):
         return {
             "type": "object",
             "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "Home Assistant URL (e.g., http://homeassistant.local:8123)"
-                },
-                "token": {
-                    "type": "string",
-                    "description": "Long-lived Access Token"
-                },
                 "domain": {
                     "type": "string",
                     "description": "Service domain (e.g., light, switch)"
@@ -106,11 +98,11 @@ class HomeAssistantSensorPlugin(HomeAssistantPlugin):
                 "url": {
                     "type": "string",
                     "description": "Home Assistant URL"
-                },
-                "token": {
-                    "type": "string",
-                    "description": "Long-lived Access Token"
-                },
+    def get_config_schema(self) -> Dict[str, Any]:
+        """Configuration schema."""
+        return {
+            "type": "object",
+            "properties": {
                 "entity_id": {
                     "type": "string",
                     "description": "Entity ID (e.g., sensor.temperature)"
@@ -130,14 +122,6 @@ class HomeAssistantSensorPlugin(HomeAssistantPlugin):
             },
             "required": ["entity_id"]
         }
-
-    def execute(self, button_id: int, context: Dict[str, Any] = None):
-        """Fetch and display state."""
-        url, token = self._get_ha_config()
-        entity_id = self.config.get("entity_id")
-        attribute = self.config.get("attribute")
-        unit = self.config.get("unit", "")
-        label = self.config.get("label", "")
 
         if not all([url, token, entity_id]):
             raise ValueError("Missing Home Assistant configuration")
