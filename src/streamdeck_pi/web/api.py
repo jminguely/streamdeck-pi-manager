@@ -354,20 +354,6 @@ async def move_button(
     return {"status": "ok", "new_key": target_key}
 
 
-# Plugin endpointson and button.action.plugin_id:
-        try:
-            plugin_manager.execute_plugin(
-                button.action.plugin_id,
-                key,
-                config=button.action.config
-            )
-            return {"status": "executed"}
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e))
-
-    return {"status": "no action configured"}
-
-
 # Plugin endpoints
 @router.get("/plugins", response_model=List[PluginInfo])
 async def list_plugins(plugin_manager: PluginManager = Depends(get_plugin_manager)):
