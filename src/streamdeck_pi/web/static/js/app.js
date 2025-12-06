@@ -190,8 +190,10 @@ createApp({
         await axios.post(`/api/v1/buttons/${this.editingButton.key}/press`);
       } catch (error) {
         console.error('Failed to test button:', error);
-        alert('Failed to test button: ' + error.response?.data?.detail);
-        getPluginName(pluginId) {
+        alert('Failed to test button: ' + (error.response?.data?.detail || error.message));
+      }
+    },
+    getPluginName(pluginId) {
           const plugin = this.plugins.find(p => p.id === pluginId);
           return plugin ? plugin.name : pluginId;
         },
