@@ -132,7 +132,10 @@ class DeckController:
         """Update the info screen (Neo specific)."""
         # Check if device supports touchscreen
         # This is a best-effort attempt to support Neo features
-        if not hasattr(self.device.device, 'set_touchscreen_image'):
+        # Even if the library method is a stub, we will try to use our manual implementation if it's a Neo
+        is_neo = self.device.device and self.device.device.deck_type() == "Stream Deck Neo"
+
+        if not is_neo and not hasattr(self.device.device, 'set_touchscreen_image'):
             logger.warning("Device does not support set_touchscreen_image")
             return
 
@@ -154,11 +157,11 @@ class DeckController:
 
         # Use RGBA for transparency support if needed, though RGB is usually fine
         # Use RED background to verify visibility
-        image = Image.new('RGB', (width, height), 'red')
+        image = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(image)
 
         # Draw a white border to verify display is working
-        draw.rectangle([(0, 0), (width-1, height-1)], outline="white", width=4)
+        draw.rectangle([(0, 0), (width-1, height-1)], outline="white", width=2)
 
         # Draw Page Title
         try:
@@ -194,7 +197,85 @@ class DeckController:
 
         # Convert to native format and set
         try:
-            from StreamDeck.ImageHelpers import PILHelper
+            if is_neo:
+                # Manual implementation for Neo
+                import io
+                img_byte_arr = io.BytesIO()
+                image.save(img_byte_arr, format='JPEG', quality=95)
+                jpeg_bytes = img_byte_arr.getvalue()
+                self._send_neo_image(jpeg_bytes)
+            else:
+                from StreamDeck.ImageHelpers import PILHelper
+                # Neo expects a specific format for the touchscreen image
+                # It seems the library handles conversion, but let's ensure we are passing the right thing.
+                # Some versions of the library might need explicit format conversion or sizing.
+
+                # Log that we are attempting to set the image
+                logger.info(f"Setting info screen image: {width}x{height}")
+
+                native_image = PILHelper.to_native_format(self.device.device, image)
+
+                # Debug native image
+                if native_image:
+                    logger.info(f"Native image type: {type(native_image)}")
+                    if hasattr(native_image, '__len__'):
+                        logger.info(f"Native image length: {len(native_image)}")
+                else:
+                    logger.error("Native image is None!")
+
+                self.device.device.set_touchscreen_image(native_image)
+            logger.info("Info screen updated successfully")
+        except Exception as e:
+            logger.error(f"Failed to update info screen: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+
+    def _send_neo_image(self, jpeg_data):
+        """
+        Manually send image to Stream Deck Neo Info Screen.
+        Protocol: Report 0x02, Command 0x0B.
+        """
+        IMAGE_REPORT_LENGTH = 1024
+        HEADER_LENGTH = 8
+        PAYLOAD_LENGTH = IMAGE_REPORT_LENGTH - HEADER_LENGTH
+
+        page_number = 0
+        bytes_remaining = len(jpeg_data)
+
+        logger.info(f"Sending Neo Image: {bytes_remaining} bytes")
+
+        while bytes_remaining > 0:
+            this_length = min(bytes_remaining, PAYLOAD_LENGTH)
+            bytes_sent = page_number * PAYLOAD_LENGTH
+
+            is_last = 1 if this_length == bytes_remaining else 0
+
+            # Header: [ID, CMD, PAD, FLAGS, LEN_LSB, LEN_MSB, PAGE_LSB, PAGE_MSB]
+            header = [
+                0x02, 0x0B, 0x00, is_last,
+                this_length & 0xFF, (this_length >> 8) & 0xFF,
+                page_number & 0xFF, (page_number >> 8) & 0xFF
+            ]
+
+            payload = list(jpeg_data[bytes_sent:bytes_sent + this_length])
+
+            # Pad to full report length
+            padding = [0] * (PAYLOAD_LENGTH - len(payload))
+
+            report = header + payload + padding
+
+            # Send report
+            # Access raw HID device
+            # self.device.device is the StreamDeck wrapper
+            # self.device.device.device is the Transport (HID)
+            try:
+                self.device.device.device.write(report)
+            except Exception as e:
+                logger.error(f"Failed to write HID report: {e}")
+                raise
+
+            bytes_remaining -= this_length
+            page_number += 1
             # Neo expects a specific format for the touchscreen image
             # It seems the library handles conversion, but let's ensure we are passing the right thing.
             # Some versions of the library might need explicit format conversion or sizing.
