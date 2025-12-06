@@ -66,16 +66,20 @@ class DeckController:
         if hasattr(self.device.device, 'set_touchscreen_callback'):
             self.device.device.set_touchscreen_callback(self.on_touch)
             logger.info("Registered touchscreen callback")
-        else:
-            # Fallback: Try to register callback for keys 8 and 9 (Neo touch zones)
-            # Some libraries map touch zones to extra keys
-            logger.warning("Device does not support set_touchscreen_callback, trying key callbacks for touch zones")
-            try:
-                self.device.register_button_callback(8, lambda k: self.on_touch_key(8))
-                self.device.register_button_callback(9, lambda k: self.on_touch_key(9))
-                logger.info("Registered fallback key callbacks for touch zones")
-            except Exception as e:
-                logger.warning(f"Failed to register fallback key callbacks: {e}")
+
+        # Also register for keys 8 and 9 anyway, just in case the library maps them
+        # even if set_touchscreen_callback exists (some versions do both or one)
+        try:
+            # We need to access the underlying device's key callback mechanism if our wrapper doesn't support > key_count
+            # But our wrapper uses range(key_count).
+            # Neo has 8 keys (0-7). If touch is 8/9, we need to register them.
+
+            # Let's try to register them with our wrapper
+            self.device.register_button_callback(8, self.on_key_press)
+            self.device.register_button_callback(9, self.on_key_press)
+            logger.info("Registered potential touch keys 8 and 9")
+        except Exception as e:
+            logger.warning(f"Could not register keys 8/9: {e}")
 
     def on_touch_key(self, key):
         """Handle touch events mapped to keys."""
