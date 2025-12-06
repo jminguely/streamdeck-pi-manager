@@ -53,16 +53,20 @@ class DeckController:
         # event is a dict with 'x', 'y', 'interaction' (press/release/drag)
         logger.info(f"Touch event: {event}")
 
+        # Ensure event is a dictionary
+        if not isinstance(event, dict):
+            logger.warning(f"Unexpected event format: {type(event)}")
+            return
+
         x = event.get('x')
-        interaction = event.get('interaction') # 'short' (tap), 'long', 'drag'
 
         # Neo Info Bar resolution is approx 248x58
         # Left button area
-        if x < 60:
+        if x is not None and x < 60:
             logger.info("Left touch detected")
             self.prev_page()
         # Right button area
-        elif x > 180:
+        elif x is not None and x > 180:
             logger.info("Right touch detected")
             self.next_page()
     def get_current_page(self) -> Optional[Page]:
@@ -119,12 +123,27 @@ class DeckController:
         width = 248
         height = 58
 
+        # Use RGBA for transparency support if needed, though RGB is usually fine
         image = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(image)
 
         # Draw Page Title
         try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
+            # Try a few common font locations
+            font_paths = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf"
+            ]
+            font = None
+            for path in font_paths:
+                try:
+                    font = ImageFont.truetype(path, 20)
+                    break
+                except:
+                    continue
+            if not font:
+                font = ImageFont.load_default()
         except:
             font = ImageFont.load_default()
 
@@ -155,7 +174,8 @@ class DeckController:
             logger.info("Info screen updated successfully")
         except Exception as e:
             logger.error(f"Failed to update info screen: {e}")
-
+            import traceback
+            logger.error(traceback.format_exc())
     def on_key_press(self, key: int):
         """Handle key press."""
         logger.info(f"Key pressed: {key}")
