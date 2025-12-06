@@ -95,14 +95,6 @@ class HomeAssistantSensorPlugin(HomeAssistantPlugin):
         return {
             "type": "object",
             "properties": {
-                "url": {
-                    "type": "string",
-                    "description": "Home Assistant URL"
-    def get_config_schema(self) -> Dict[str, Any]:
-        """Configuration schema."""
-        return {
-            "type": "object",
-            "properties": {
                 "entity_id": {
                     "type": "string",
                     "description": "Entity ID (e.g., sensor.temperature)"
@@ -122,6 +114,14 @@ class HomeAssistantSensorPlugin(HomeAssistantPlugin):
             },
             "required": ["entity_id"]
         }
+
+    def execute(self, button_id: int, context: Dict[str, Any] = None):
+        """Fetch and display state."""
+        url, token = self._get_ha_config()
+        entity_id = self.config.get("entity_id")
+        attribute = self.config.get("attribute")
+        unit = self.config.get("unit", "")
+        label = self.config.get("label", "")
 
         if not all([url, token, entity_id]):
             raise ValueError("Missing Home Assistant configuration")
@@ -148,6 +148,37 @@ class HomeAssistantSensorPlugin(HomeAssistantPlugin):
                 value = state_data.get("state")
 
             # Format value (e.g. round float)
+            if isinstance(value, float):
+                value = round(value, 2)
+                # If it's volume (0.0-1.0), maybe multiply by 100?
+                # Let's keep it raw or let user handle it via unit/label,
+                # but for volume specifically, it's often 0-1.
+                # I won't assume volume unless attribute is volume_level
+                if attribute == "volume_level":
+                    value = int(value * 100)
+
+            display_text = f"{value}{unit}"
+            if label:
+                display_text = f"{label}\n{display_text}"
+
+            self.logger.info(f"State: {value}")
+
+            if self.device_manager:
+                self.device_manager.set_button_text(
+                    button_id,
+                    display_text,
+                    font_size=context.get("font_size", 14) if context else 14,
+                    bg_color=context.get("bg_color", (0, 0, 0)) if context else (0, 0, 0),
+                    text_color=context.get("text_color", (255, 255, 255)) if context else (255, 255, 255)
+                )
+
+            return value
+
+        except Exception as e:
+            self.logger.error(f"Failed to fetch state: {e}")
+            if self.device_manager:
+                 self.device_manager.set_button_text(button_id, "Error", text_color=(255, 0, 0))
+            raise
             if isinstance(value, float):
                 value = round(value, 2)
                 # If it's volume (0.0-1.0), maybe multiply by 100?
