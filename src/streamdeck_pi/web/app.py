@@ -92,6 +92,46 @@ def create_app() -> FastAPI:
         try:
             if device_manager.connect():
                 logger.info("Successfully connected to Stream Deck")
+                
+                # Restore button configurations
+                for key, button in app.state.button_configs.items():
+                    if button.enabled and button.label:
+                        try:
+                            # Update display
+                            device_manager.set_button_text(
+                                key,
+                                button.label,
+                                font_size=button.font_size,
+                                bg_color=button.bg_color,
+                                text_color=button.text_color
+                            )
+                            
+                            # Register callback
+                            if button.action and button.action.plugin_id:
+                                # Define callback that captures app state
+                                def create_callback(btn_id):
+                                    def callback(k):
+                                        current_button = app.state.button_configs.get(btn_id)
+                                        if not current_button:
+                                            return
+                                            
+                                        plugin_manager.execute_plugin(
+                                            current_button.action.plugin_id,
+                                            btn_id,
+                                            config=current_button.action.config,
+                                            context={
+                                                "bg_color": current_button.bg_color,
+                                                "text_color": current_button.text_color,
+                                                "font_size": current_button.font_size
+                                            }
+                                        )
+                                    return callback
+                                    
+                                device_manager.register_button_callback(key, create_callback(key))
+                        except Exception as e:
+                            logger.error(f"Failed to restore button {key}: {e}")
+                            
+                logger.info(f"Restored {len(app.state.button_configs)} button configurations")
             else:
                 logger.warning("No Stream Deck device found")
         except Exception as e:
