@@ -166,7 +166,7 @@ async def update_page(
     controller: DeckController = Depends(get_deck_controller)
 ):
     """Update page details."""
-    config = controller.config_manager.load_config()
+    config = controller.config
     pages = config.get("pages", {})
     page = pages.get(page_id)
 
@@ -180,8 +180,6 @@ async def update_page(
     controller.config_manager.save_config(config)
     controller.render_current_page()
     return {"status": "updated"}
-
-
 # Button endpoints
 @router.get("/buttons")
 async def list_buttons(
@@ -301,18 +299,18 @@ async def press_button(
 
 @router.post("/buttons/swap")
 async def swap_buttons(
+@router.post("/buttons/swap")
+async def swap_buttons(
     req: SwapButtonRequest,
     deck_controller: DeckController = Depends(get_deck_controller)
 ):
     """Swap two buttons on the same page."""
-    config = deck_controller.config_manager.load_config()
+    config = deck_controller.config
     pages = config.get("pages", {})
     page = pages.get(req.page_id)
 
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
-
-    # Get buttons (might be None if empty slot)
     b1 = page.buttons.get(req.key1)
     b2 = page.buttons.get(req.key2)
 
@@ -342,16 +340,16 @@ async def swap_buttons(
 
 @router.post("/buttons/move")
 async def move_button(
+@router.post("/buttons/move")
+async def move_button(
     req: MoveButtonRequest,
     deck_controller: DeckController = Depends(get_deck_controller)
 ):
     """Move a button to another page."""
-    config = deck_controller.config_manager.load_config()
+    config = deck_controller.config
     pages = config.get("pages", {})
     source_page = pages.get(req.source_page_id)
     target_page = pages.get(req.target_page_id)
-
-    if not source_page or not target_page:
         raise HTTPException(status_code=404, detail="Page not found")
 
     button = source_page.buttons.get(req.source_key)
