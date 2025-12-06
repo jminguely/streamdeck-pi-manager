@@ -36,6 +36,7 @@ class ButtonConfigRequest(BaseModel):
     text_color: List[int] = [255, 255, 255]
     font_size: int = 14
     enabled: bool = True
+    custom_colors: bool = False
 
 
 class PluginInfo(BaseModel):
@@ -248,7 +249,8 @@ async def update_button(
         bg_color=tuple(config.bg_color),
         text_color=tuple(config.text_color),
         font_size=config.font_size,
-        enabled=config.enabled
+        enabled=config.enabled,
+        custom_colors=config.custom_colors
     )
 
     controller.update_button(key, button)

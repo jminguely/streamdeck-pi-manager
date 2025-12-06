@@ -171,7 +171,8 @@ createApp({
         bg_color: this.rgbToHex(button.bg_color || [0, 0, 0]),
         text_color: this.rgbToHex(button.text_color || [255, 255, 255]),
         selectedPlugin: button.action?.plugin_id || '',
-        config: button.action?.config || {}
+        config: button.action?.config || {},
+        custom_colors: button.custom_colors || false
       };
     },
     closeEditor() {
@@ -194,7 +195,8 @@ createApp({
           font_size: this.editingButton.font_size,
           bg_color: this.hexToRgb(this.editingButton.bg_color),
           text_color: this.hexToRgb(this.editingButton.text_color),
-          enabled: this.editingButton.enabled
+          enabled: this.editingButton.enabled,
+          custom_colors: this.editingButton.custom_colors
         };
 
         await axios.put(`/api/v1/buttons/${this.editingButton.key}`, data);

@@ -17,11 +17,11 @@ class ButtonActionType(str, Enum):
 @dataclass
 class ButtonAction:
     """Represents an action to be executed when a button is pressed."""
-    
+
     type: ButtonActionType
     plugin_id: Optional[str] = None
     config: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -29,7 +29,7 @@ class ButtonAction:
             "plugin_id": self.plugin_id,
             "config": self.config,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ButtonAction":
         """Create from dictionary."""
@@ -43,7 +43,7 @@ class ButtonAction:
 @dataclass
 class Button:
     """Represents a Stream Deck button configuration."""
-    
+
     key: int
     label: str = ""
     icon: Optional[str] = None
@@ -52,7 +52,8 @@ class Button:
     text_color: tuple = (255, 255, 255)
     font_size: int = 14
     enabled: bool = True
-    
+    custom_colors: bool = False
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -64,14 +65,15 @@ class Button:
             "text_color": self.text_color,
             "font_size": self.font_size,
             "enabled": self.enabled,
+            "custom_colors": self.custom_colors,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "Button":
         """Create from dictionary."""
         action_data = data.get("action")
         action = ButtonAction.from_dict(action_data) if action_data else None
-        
+
         return cls(
             key=data["key"],
             label=data.get("label", ""),
@@ -81,4 +83,5 @@ class Button:
             text_color=tuple(data.get("text_color", [255, 255, 255])),
             font_size=data.get("font_size", 14),
             enabled=data.get("enabled", True),
+            custom_colors=data.get("custom_colors", False),
         )

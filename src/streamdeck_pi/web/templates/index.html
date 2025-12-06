@@ -198,7 +198,17 @@
                 </div>
               </div>
 
-              <div class="form-row">
+              <div class="form-group">
+                <label>
+                  <input
+                    type="checkbox"
+                    v-model="editingButton.custom_colors"
+                  />
+                  Use Custom Colors
+                </label>
+              </div>
+
+              <div class="form-row" v-if="editingButton.custom_colors">
                 <div class="form-group">
                   <label>Text Color</label>
                   <input

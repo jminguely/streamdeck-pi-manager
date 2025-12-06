@@ -131,14 +131,13 @@ class DeckController:
 
         for key, button in page.buttons.items():
             if button.enabled:
-                # Use button colors if set, otherwise use page colors, otherwise default
-                bg_color = button.bg_color
-                if bg_color == (0, 0, 0) and page.bg_color:
-                    bg_color = page.bg_color
-
-                text_color = button.text_color
-                if text_color == (255, 255, 255) and page.text_color:
-                    text_color = page.text_color
+                # Use button colors if custom_colors is set, otherwise use page colors
+                if button.custom_colors:
+                    bg_color = button.bg_color
+                    text_color = button.text_color
+                else:
+                    bg_color = page.bg_color if page.bg_color else (0, 0, 0)
+                    text_color = page.text_color if page.text_color else (255, 255, 255)
 
                 self.device.set_button_text(
                     key,
@@ -418,14 +417,13 @@ class DeckController:
         self.config_manager.save_config(self.config)
 
         if button.enabled:
-            # Use button colors if set, otherwise use page colors
-            bg_color = button.bg_color
-            if bg_color == (0, 0, 0) and page.bg_color:
-                bg_color = page.bg_color
-
-            text_color = button.text_color
-            if text_color == (255, 255, 255) and page.text_color:
-                text_color = page.text_color
+            # Use button colors if custom_colors is set, otherwise use page colors
+            if button.custom_colors:
+                bg_color = button.bg_color
+                text_color = button.text_color
+            else:
+                bg_color = page.bg_color if page.bg_color else (0, 0, 0)
+                text_color = page.text_color if page.text_color else (255, 255, 255)
 
             self.device.set_button_text(
                 key,
