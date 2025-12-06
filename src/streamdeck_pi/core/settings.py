@@ -23,7 +23,13 @@ class SettingsManager:
                     self.config_path = str(p)
                     break
 
-        self.settings = self.load_settings()
+        if self.config_path:
+            logger.info(f"Loading settings from {self.config_path}")
+            self.settings = self.load_settings()
+            logger.info(f"Loaded settings keys: {list(self.settings.keys())}")
+        else:
+            logger.warning("No configuration file found in default locations.")
+            self.settings = {}
 
     def load_settings(self) -> Dict[str, Any]:
         """Load settings from file."""
