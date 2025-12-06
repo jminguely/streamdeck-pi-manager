@@ -267,31 +267,31 @@ async def swap_buttons(
     config = deck_controller.config_manager.load_config()
     pages = config.get("pages", {})
     page = pages.get(req.page_id)
-    
+
     if not page:
         raise HTTPException(status_code=404, detail="Page not found")
-        
+
     # Get buttons (might be None if empty slot)
     b1 = page.buttons.get(req.key1)
     b2 = page.buttons.get(req.key2)
-    
+
     # If both don't exist, nothing to do
     if not b1 and not b2:
         return {"status": "ok"}
-        
+
     # Perform swap
     if b1:
         b1.key = req.key2
         page.buttons[req.key2] = b1
     elif req.key2 in page.buttons:
         del page.buttons[req.key2]
-            
+
     if b2:
         b2.key = req.key1
         page.buttons[req.key1] = b2
     elif req.key1 in page.buttons:
         del page.buttons[req.key1]
-            
+
     deck_controller.config_manager.save_config(config)
     deck_controller.render_current_page()
     return {"status": "ok"}
@@ -307,32 +307,32 @@ async def move_button(
     pages = config.get("pages", {})
     source_page = pages.get(req.source_page_id)
     target_page = pages.get(req.target_page_id)
-    
+
     if not source_page or not target_page:
         raise HTTPException(status_code=404, detail="Page not found")
-        
+
     button = source_page.buttons.get(req.source_key)
     if not button:
         raise HTTPException(status_code=404, detail="Button not found")
-        
+
     # Find first empty slot in target page
     device_info = deck_controller.device.get_device_info()
     key_count = device_info.get("key_count", 32)
-    
+
     target_key = -1
     for k in range(key_count):
         if k not in target_page.buttons:
             target_key = k
             break
-            
+
     if target_key == -1:
         raise HTTPException(status_code=400, detail="Target page is full")
-        
+
     # Move
     del source_page.buttons[req.source_key]
     button.key = target_key
     target_page.buttons[target_key] = button
-    
+
     deck_controller.config_manager.save_config(config)
     deck_controller.render_current_page()
     return {"status": "ok", "new_key": target_key}

@@ -191,87 +191,87 @@ createApp({
       } catch (error) {
         console.error('Failed to test button:', error);
         alert('Failed to test button: ' + error.response?.data?.detail);
-    getPluginName(pluginId) {
-      const plugin = this.plugins.find(p => p.id === pluginId);
-      return plugin ? plugin.name : pluginId;
-    },
-    rgbToHex(rgb) {
-      if (!rgb || rgb.length !== 3) return '#000000';
-      return '#' + rgb.map(x => {
-        const hex = x.toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-      }).join('');
-    },
-    hexToRgb(hex) {
-      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-      return result ? [
-        parseInt(result[1], 16),
-        parseInt(result[2], 16),
-        parseInt(result[3], 16)
-      ] : [0, 0, 0];
-    },
-    onDragStart(event, button) {
-      event.dataTransfer.setData('text/plain', JSON.stringify({
-        key: button.key,
-        pageId: this.currentPageId
-      }));
-      event.dataTransfer.effectAllowed = 'move';
-    },
-    onDragOver(event) {
-      event.preventDefault();
-      event.dataTransfer.dropEffect = 'move';
-    },
+        getPluginName(pluginId) {
+          const plugin = this.plugins.find(p => p.id === pluginId);
+          return plugin ? plugin.name : pluginId;
+        },
+        rgbToHex(rgb) {
+          if (!rgb || rgb.length !== 3) return '#000000';
+          return '#' + rgb.map(x => {
+            const hex = x.toString(16);
+            return hex.length === 1 ? '0' + hex : hex;
+          }).join('');
+        },
+        hexToRgb(hex) {
+          const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+          return result ? [
+            parseInt(result[1], 16),
+            parseInt(result[2], 16),
+            parseInt(result[3], 16)
+          ] : [0, 0, 0];
+        },
+        onDragStart(event, button) {
+          event.dataTransfer.setData('text/plain', JSON.stringify({
+            key: button.key,
+            pageId: this.currentPageId
+          }));
+          event.dataTransfer.effectAllowed = 'move';
+        },
+        onDragOver(event) {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'move';
+        },
     async onDrop(event, targetButton) {
-      event.preventDefault();
-      const data = JSON.parse(event.dataTransfer.getData('text/plain'));
-      
-      if (data.pageId !== this.currentPageId) return;
-      if (data.key === targetButton.key) return;
-      
-      try {
-        await axios.post('/api/v1/buttons/swap', {
-          page_id: this.currentPageId,
-          key1: data.key,
-          key2: targetButton.key
-        });
-        await this.loadButtons();
-      } catch (error) {
-        console.error('Failed to swap buttons:', error);
-      }
-    },
-    openMoveModal(button, event) {
-      event.stopPropagation();
-      this.movingButton = button;
-      this.showMoveModal = true;
-    },
-    async moveButtonToPage(targetPageId) {
-      if (!this.movingButton) return;
-      try {
-        await axios.post('/api/v1/buttons/move', {
-          source_page_id: this.currentPageId,
-          source_key: this.movingButton.key,
-          target_page_id: targetPageId
-        });
-        await this.loadButtons();
-        this.showMoveModal = false;
-        this.movingButton = null;
-      } catch (error) {
-        console.error('Failed to move button:', error);
-        alert('Failed to move button: ' + (error.response?.data?.detail || error.message));
-      }
-    }
-  },
-  async mounted() {
-  },
-  async mounted() {
-    await this.loadDeviceInfo();
-    await this.loadPlugins();
-    await this.loadPages();
-    await this.loadButtons();
+          event.preventDefault();
+          const data = JSON.parse(event.dataTransfer.getData('text/plain'));
 
-    // Auto-refresh device status every 30 seconds
-    setInterval(() => {
-      this.loadDeviceInfo();
-    }, 30000);
-  }
-}).mount('#app');
+          if (data.pageId !== this.currentPageId) return;
+          if (data.key === targetButton.key) return;
+
+          try {
+            await axios.post('/api/v1/buttons/swap', {
+              page_id: this.currentPageId,
+              key1: data.key,
+              key2: targetButton.key
+            });
+            await this.loadButtons();
+          } catch (error) {
+            console.error('Failed to swap buttons:', error);
+          }
+        },
+        openMoveModal(button, event) {
+          event.stopPropagation();
+          this.movingButton = button;
+          this.showMoveModal = true;
+        },
+    async moveButtonToPage(targetPageId) {
+          if (!this.movingButton) return;
+          try {
+            await axios.post('/api/v1/buttons/move', {
+              source_page_id: this.currentPageId,
+              source_key: this.movingButton.key,
+              target_page_id: targetPageId
+            });
+            await this.loadButtons();
+            this.showMoveModal = false;
+            this.movingButton = null;
+          } catch (error) {
+            console.error('Failed to move button:', error);
+            alert('Failed to move button: ' + (error.response?.data?.detail || error.message));
+          }
+        }
+      },
+  async mounted() {
+      },
+  async mounted() {
+        await this.loadDeviceInfo();
+        await this.loadPlugins();
+        await this.loadPages();
+        await this.loadButtons();
+
+        // Auto-refresh device status every 30 seconds
+        setInterval(() => {
+          this.loadDeviceInfo();
+        }, 30000);
+      }
+    }).mount('#app');
