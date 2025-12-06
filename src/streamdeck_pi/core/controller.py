@@ -21,11 +21,24 @@ class DeckController:
     def start(self):
         """Start the controller."""
         if self.device.connect():
+            # Set brightness to max to ensure visibility
+            try:
+                self.device.set_brightness(100)
+                logger.info("Set brightness to 100%")
+            except Exception as e:
+                logger.error(f"Failed to set brightness: {e}")
+
             self.setup_callbacks()
             self.render_current_page()
 
             # Debug device capabilities
             if self.device.device:
+                try:
+                    import StreamDeck
+                    logger.info(f"StreamDeck Library Version: {getattr(StreamDeck, '__version__', 'Unknown')}")
+                except:
+                    pass
+                
                 logger.info(f"Device type: {self.device.device.deck_type()}")
                 logger.info(f"Has set_touchscreen_image: {hasattr(self.device.device, 'set_touchscreen_image')}")
                 logger.info(f"Has set_touchscreen_callback: {hasattr(self.device.device, 'set_touchscreen_callback')}")
@@ -124,11 +137,12 @@ class DeckController:
         height = 58
 
         # Use RGBA for transparency support if needed, though RGB is usually fine
-        image = Image.new('RGB', (width, height), 'black')
+        # Use RED background to verify visibility
+        image = Image.new('RGB', (width, height), 'red')
         draw = ImageDraw.Draw(image)
 
         # Draw a white border to verify display is working
-        draw.rectangle([(0, 0), (width-1, height-1)], outline="white", width=2)
+        draw.rectangle([(0, 0), (width-1, height-1)], outline="white", width=4)
 
         # Draw Page Title
         try:
