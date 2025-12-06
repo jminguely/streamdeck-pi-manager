@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any
 from PIL import Image, ImageDraw, ImageFont
 from streamdeck_pi.core.device import StreamDeckManager
 from streamdeck_pi.core.config import ConfigManager, Page
+from streamdeck_pi.core.button import Button
 from streamdeck_pi.plugins.base import PluginManager
 
 logger = logging.getLogger(__name__)
