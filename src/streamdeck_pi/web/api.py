@@ -346,6 +346,8 @@ async def move_button(
     pages = config.get("pages", {})
     source_page = pages.get(req.source_page_id)
     target_page = pages.get(req.target_page_id)
+
+    if not source_page or not target_page:
         raise HTTPException(status_code=404, detail="Page not found")
 
     button = source_page.buttons.get(req.source_key)
