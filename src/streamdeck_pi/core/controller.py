@@ -52,18 +52,19 @@ class DeckController:
         """Handle touch events."""
         # event is a dict with 'x', 'y', 'interaction' (press/release/drag)
         logger.info(f"Touch event: {event}")
-
+        
         x = event.get('x')
         interaction = event.get('interaction') # 'short' (tap), 'long', 'drag'
-
+        
         # Neo Info Bar resolution is approx 248x58
         # Left button area
-        if x < 60 and interaction == 'short':
+        if x < 60:
+            logger.info("Left touch detected")
             self.prev_page()
         # Right button area
-        elif x > 180 and interaction == 'short':
+        elif x > 180:
+            logger.info("Right touch detected")
             self.next_page()
-
     def get_current_page(self) -> Optional[Page]:
         """Get the current page object."""
         page_id = self.config.get("current_page_id")
@@ -142,8 +143,16 @@ class DeckController:
         # Convert to native format and set
         try:
             from StreamDeck.ImageHelpers import PILHelper
+            # Neo expects a specific format for the touchscreen image
+            # It seems the library handles conversion, but let's ensure we are passing the right thing.
+            # Some versions of the library might need explicit format conversion or sizing.
+            
+            # Log that we are attempting to set the image
+            logger.info(f"Setting info screen image: {width}x{height}")
+            
             native_image = PILHelper.to_native_format(self.device.device, image)
             self.device.device.set_touchscreen_image(native_image)
+            logger.info("Info screen updated successfully")
         except Exception as e:
             logger.error(f"Failed to update info screen: {e}")
 
