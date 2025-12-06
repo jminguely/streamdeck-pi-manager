@@ -127,6 +127,9 @@ class DeckController:
         image = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(image)
 
+        # Draw a white border to verify display is working
+        draw.rectangle([(0, 0), (width-1, height-1)], outline="white", width=2)
+
         # Draw Page Title
         try:
             # Try a few common font locations
@@ -170,6 +173,15 @@ class DeckController:
             logger.info(f"Setting info screen image: {width}x{height}")
 
             native_image = PILHelper.to_native_format(self.device.device, image)
+
+            # Debug native image
+            if native_image:
+                logger.info(f"Native image type: {type(native_image)}")
+                if hasattr(native_image, '__len__'):
+                    logger.info(f"Native image length: {len(native_image)}")
+            else:
+                logger.error("Native image is None!")
+
             self.device.device.set_touchscreen_image(native_image)
             logger.info("Info screen updated successfully")
         except Exception as e:
