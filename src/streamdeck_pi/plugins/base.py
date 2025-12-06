@@ -49,6 +49,16 @@ class ButtonPlugin(ABC):
         """
         pass
 
+    def tick(self, button_id: int, context: Dict[str, Any] = None):
+        """
+        Called periodically to update the plugin state.
+
+        Args:
+            button_id: The button ID
+            context: Additional context information
+        """
+        pass
+
     def get_config_schema(self) -> Dict[str, Any]:
         """
         Return JSON schema for plugin configuration.
@@ -170,3 +180,29 @@ class PluginManager:
         except Exception as e:
             logger.error(f"Error executing plugin '{plugin_id}': {e}", exc_info=True)
             raise
+
+    def tick_plugin(self, plugin_id: str, button_id: int,
+                    config: Dict[str, Any] = None, context: Dict[str, Any] = None):
+        """
+        Tick a plugin.
+
+        Args:
+            plugin_id: ID of plugin to tick
+            button_id: Button ID
+            config: Plugin configuration
+            context: Additional context
+        """
+        plugin = self.get_plugin(plugin_id)
+
+        if not plugin:
+            return
+
+        # Update plugin config if provided
+        if config:
+            plugin.config = config
+
+        try:
+            plugin.tick(button_id, context or {})
+        except Exception as e:
+            # Log error but don't raise to avoid crashing the loop
+            logger.error(f"Error ticking plugin '{plugin_id}': {e}")

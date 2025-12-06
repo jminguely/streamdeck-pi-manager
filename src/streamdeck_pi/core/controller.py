@@ -1,4 +1,6 @@
 import logging
+import threading
+import time
 from typing import Optional, Dict, Any
 from PIL import Image, ImageDraw, ImageFont
 from streamdeck_pi.core.device import StreamDeckManager
@@ -30,6 +32,7 @@ class DeckController:
 
             self.setup_callbacks()
             self.render_current_page()
+            self.start_ticker()
 
             # Debug device capabilities
             if self.device.device:
@@ -54,7 +57,48 @@ class DeckController:
 
     def stop(self):
         """Stop the controller."""
+        self.stop_ticker()
         self.device.disconnect()
+
+    def start_ticker(self):
+        """Start the background ticker."""
+        self._ticker_running = True
+        self._ticker_thread = threading.Thread(target=self._tick_loop, daemon=True)
+        self._ticker_thread.start()
+
+    def stop_ticker(self):
+        """Stop the background ticker."""
+        self._ticker_running = False
+        if hasattr(self, '_ticker_thread'):
+            self._ticker_thread.join(timeout=1)
+
+    def _tick_loop(self):
+        """Background loop to tick plugins."""
+        while self._ticker_running:
+            try:
+                self.tick_current_page()
+            except Exception as e:
+                logger.error(f"Error in tick loop: {e}")
+            time.sleep(5) # Tick every 5 seconds
+
+    def tick_current_page(self):
+        """Tick all plugins on the current page."""
+        page = self.get_current_page()
+        if not page:
+            return
+
+        for key, button in page.buttons.items():
+            if button.enabled and button.action and button.action.plugin_id:
+                self.plugin_manager.tick_plugin(
+                    button.action.plugin_id,
+                    key,
+                    config=button.action.config,
+                    context={
+                        "bg_color": button.bg_color,
+                        "text_color": button.text_color,
+                        "font_size": button.font_size
+                    }
+                )
 
     def setup_callbacks(self):
         """Register callbacks for all keys."""
