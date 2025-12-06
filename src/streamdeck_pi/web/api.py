@@ -293,14 +293,17 @@ async def press_button(
     button = page.buttons[key]
     if button.action and button.action.type == "plugin" and button.action.plugin_id:
         try:
-            plugin = plugin_manager.get_plugin(button.action.plugin_id)
-            if plugin:
-                plugin.on_key_press(
-                    button.action.plugin_id,
-                    key,
-                    config=button.action.config
-                )
-                return {"status": "executed"}
+            plugin_manager.execute_plugin(
+                button.action.plugin_id,
+                key,
+                config=button.action.config,
+                context={
+                    "bg_color": button.bg_color,
+                    "text_color": button.text_color,
+                    "font_size": button.font_size
+                }
+            )
+            return {"status": "executed"}
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
