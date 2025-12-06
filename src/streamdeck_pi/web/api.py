@@ -140,7 +140,15 @@ async def set_brightness(
 @router.get("/pages", response_model=List[PageInfo])
 async def get_pages(controller: DeckController = Depends(get_deck_controller)):
     """List all pages."""
-    return [PageInfo(id=p.id, title=p.title) for p in controller.config["pages"].values()]
+    return [
+        PageInfo(
+            id=p.id,
+            title=p.title,
+            bg_color=list(p.bg_color) if p.bg_color else None,
+            text_color=list(p.text_color) if p.text_color else None
+        )
+        for p in controller.config["pages"].values()
+    ]
 
 @router.post("/pages")
 async def create_page(title: str, controller: DeckController = Depends(get_deck_controller)):

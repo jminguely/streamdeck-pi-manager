@@ -125,8 +125,8 @@ createApp({
       this.editingPage = {
         id: page.id,
         title: page.title,
-        bg_color: this.rgbToHex(page.bg_color),
-        text_color: this.rgbToHex(page.text_color)
+        bg_color: this.rgbToHex(page.bg_color || [0, 0, 0]),
+        text_color: this.rgbToHex(page.text_color || [255, 255, 255])
       };
       this.showEditPageModal = true;
     },
