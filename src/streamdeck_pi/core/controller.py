@@ -35,10 +35,18 @@ class DeckController:
             if self.device.device:
                 try:
                     import StreamDeck
+                    import inspect
                     logger.info(f"StreamDeck Library Version: {getattr(StreamDeck, '__version__', 'Unknown')}")
-                except:
-                    pass
-                
+                    logger.info(f"StreamDeck Library File: {StreamDeck.__file__}")
+
+                    # Inspect set_touchscreen_image
+                    if hasattr(self.device.device, 'set_touchscreen_image'):
+                        src = inspect.getsource(self.device.device.set_touchscreen_image)
+                        logger.info(f"Source of set_touchscreen_image:\n{src}")
+
+                except Exception as e:
+                    logger.error(f"Failed to inspect library: {e}")
+
                 logger.info(f"Device type: {self.device.device.deck_type()}")
                 logger.info(f"Has set_touchscreen_image: {hasattr(self.device.device, 'set_touchscreen_image')}")
                 logger.info(f"Has set_touchscreen_callback: {hasattr(self.device.device, 'set_touchscreen_callback')}")
@@ -63,25 +71,33 @@ class DeckController:
 
     def on_touch(self, deck, event):
         """Handle touch events."""
-        # event is a dict with 'x', 'y', 'interaction' (press/release/drag)
-        logger.info(f"Touch event: {event}")
+        try:
+            # event is a dict with 'x', 'y', 'interaction' (press/release/drag)
+            logger.info(f"Touch event received: {event}")
 
-        # Ensure event is a dictionary
-        if not isinstance(event, dict):
-            logger.warning(f"Unexpected event format: {type(event)}")
-            return
+            # Ensure event is a dictionary
+            if not isinstance(event, dict):
+                logger.warning(f"Unexpected event format: {type(event)} - {event}")
+                return
 
-        x = event.get('x')
+            x = event.get('x')
 
-        # Neo Info Bar resolution is approx 248x58
-        # Left button area
-        if x is not None and x < 60:
-            logger.info("Left touch detected")
-            self.prev_page()
-        # Right button area
-        elif x is not None and x > 180:
-            logger.info("Right touch detected")
-            self.next_page()
+            # Log all details
+            logger.info(f"Touch X: {x}, Y: {event.get('y')}, Interaction: {event.get('interaction')}")
+
+            # Neo Info Bar resolution is approx 248x58
+            # Left button area
+            if x is not None and x < 60:
+                logger.info("Left touch detected")
+                self.prev_page()
+            # Right button area
+            elif x is not None and x > 180:
+                logger.info("Right touch detected")
+                self.next_page()
+        except Exception as e:
+            logger.error(f"Error in on_touch: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
     def get_current_page(self) -> Optional[Page]:
         """Get the current page object."""
         page_id = self.config.get("current_page_id")
