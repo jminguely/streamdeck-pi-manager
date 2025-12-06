@@ -230,52 +230,50 @@
                 </div>
               </div>
             </div>
-            <!-- Move Button Modal -->
-            <div
-              class="modal"
-              v-if="showMoveModal"
-              @click.self="showMoveModal = false"
-            >
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h2>
-                    Move Button {{ movingButton ? movingButton.key : '' }}
-                  </h2>
-                  <button class="close" @click="showMoveModal = false">
-                    &times;
-                  </button>
-                </div>
-                <div class="modal-body">
-                  <p>Select target page:</p>
-                  <div class="list-group">
-                    <button
-                      v-for="page in pages"
-                      :key="page.id"
-                      class="list-group-item list-group-item-action"
-                      @click="moveButtonToPage(page.id)"
-                      :disabled="page.id === currentPageId"
-                      style="
-                        width: 100%;
-                        text-align: left;
-                        margin-bottom: 5px;
-                        padding: 10px;
-                        cursor: pointer;
-                      "
-                    >
-                      {{ page.title }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
 
-            <!-- Page Modal -->
             <div class="modal-footer">
               <button @click="testButton" class="btn btn-secondary">
                 Test
               </button>
               <button @click="clearButton" class="btn btn-danger">Clear</button>
               <button @click="saveButton" class="btn btn-primary">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Move Button Modal -->
+        <div
+          class="modal"
+          v-if="showMoveModal"
+          @click.self="showMoveModal = false"
+        >
+          <div class="modal-content">
+            <div class="modal-header">
+              <h2>Move Button {{ movingButton ? movingButton.key : '' }}</h2>
+              <button class="close" @click="showMoveModal = false">
+                &times;
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>Select target page:</p>
+              <div class="list-group">
+                <button
+                  v-for="page in pages"
+                  :key="page.id"
+                  class="list-group-item list-group-item-action"
+                  @click="moveButtonToPage(page.id)"
+                  :disabled="page.id === currentPageId"
+                  style="
+                    width: 100%;
+                    text-align: left;
+                    margin-bottom: 5px;
+                    padding: 10px;
+                    cursor: pointer;
+                  "
+                >
+                  {{ page.title }}
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -262,8 +262,6 @@ createApp({
         }
       },
   async mounted() {
-      },
-  async mounted() {
         await this.loadDeviceInfo();
         await this.loadPlugins();
         await this.loadPages();

@@ -255,6 +255,22 @@ async def press_button(
     """Simulate button press (for testing)."""
     page = controller.get_current_page()
     if not page or key not in page.buttons:
+        return {"status": "no action configured"}
+
+    button = page.buttons[key]
+    if button.action and button.action.type == "plugin" and button.action.plugin_id:
+        try:
+            plugin = plugin_manager.get_plugin(button.action.plugin_id)
+            if plugin:
+                plugin.on_key_press(
+                    button.action.plugin_id,
+                    key,
+                    config=button.action.config
+                )
+                return {"status": "executed"}
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
     return {"status": "no action configured"}
 
 
