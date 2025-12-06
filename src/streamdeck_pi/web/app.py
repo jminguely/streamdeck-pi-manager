@@ -11,6 +11,7 @@ import logging
 from streamdeck_pi.web.api import router as api_router
 from streamdeck_pi.core.device import StreamDeckManager
 from streamdeck_pi.core.config import ConfigManager
+from streamdeck_pi.core.controller import DeckController
 from streamdeck_pi.plugins.base import PluginManager
 from streamdeck_pi.plugins import system, network, homeassistant
 
@@ -46,6 +47,9 @@ def create_app() -> FastAPI:
         config_path = Path("buttons.json")
 
     config_manager = ConfigManager(config_path=str(config_path))
+    
+    # Initialize Deck Controller
+    deck_controller = DeckController(device_manager, config_manager, plugin_manager)
 
     # Register built-in plugins
     plugin_manager.register_plugin(system.ShutdownPlugin)
@@ -64,7 +68,8 @@ def create_app() -> FastAPI:
     app.state.device_manager = device_manager
     app.state.plugin_manager = plugin_manager
     app.state.config_manager = config_manager
-    app.state.button_configs = config_manager.load_buttons()
+    app.state.deck_controller = deck_controller
+    # app.state.button_configs is deprecated, use deck_controller or config_manager directly
 
     # Include API routes
     app.include_router(api_router, prefix="/api/v1")
@@ -90,58 +95,16 @@ def create_app() -> FastAPI:
         """Connect to device on startup."""
         logger.info("Starting Stream Deck Pi Manager...")
         try:
-            if device_manager.connect():
-                logger.info("Successfully connected to Stream Deck")
-                
-                # Restore button configurations
-                for key, button in app.state.button_configs.items():
-                    if button.enabled and button.label:
-                        try:
-                            # Update display
-                            device_manager.set_button_text(
-                                key,
-                                button.label,
-                                font_size=button.font_size,
-                                bg_color=button.bg_color,
-                                text_color=button.text_color
-                            )
-                            
-                            # Register callback
-                            if button.action and button.action.plugin_id:
-                                # Define callback that captures app state
-                                def create_callback(btn_id):
-                                    def callback(k):
-                                        current_button = app.state.button_configs.get(btn_id)
-                                        if not current_button:
-                                            return
-                                            
-                                        plugin_manager.execute_plugin(
-                                            current_button.action.plugin_id,
-                                            btn_id,
-                                            config=current_button.action.config,
-                                            context={
-                                                "bg_color": current_button.bg_color,
-                                                "text_color": current_button.text_color,
-                                                "font_size": current_button.font_size
-                                            }
-                                        )
-                                    return callback
-                                    
-                                device_manager.register_button_callback(key, create_callback(key))
-                        except Exception as e:
-                            logger.error(f"Failed to restore button {key}: {e}")
-                            
-                logger.info(f"Restored {len(app.state.button_configs)} button configurations")
-            else:
-                logger.warning("No Stream Deck device found")
+            deck_controller.start()
+            logger.info("Deck Controller started")
         except Exception as e:
-            logger.error(f"Failed to connect to Stream Deck: {e}")
+            logger.error(f"Failed to start Deck Controller: {e}")
 
     # Shutdown event
     @app.on_event("shutdown")
     async def shutdown_event():
         """Disconnect from device on shutdown."""
         logger.info("Shutting down...")
-        device_manager.disconnect()
+        deck_controller.stop()
 
     return app

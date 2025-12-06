@@ -6,8 +6,12 @@ createApp({
             deviceInfo: null,
             buttons: [],
             plugins: [],
+            pages: [],
+            currentPageId: null,
             brightness: 50,
             editingButton: null,
+            newPageTitle: '',
+            showPageModal: false
         };
     },
     computed: {
@@ -36,6 +40,24 @@ createApp({
                 this.deviceInfo = response.data;
             } catch (error) {
                 console.error('Failed to load device info:', error);
+            }
+        },
+        async loadPages() {
+            try {
+                const response = await axios.get('/api/v1/pages');
+                this.pages = response.data;
+                // If we don't have a current page, assume the first one or fetch it?
+                // The backend keeps track of current page.
+                // But we don't know which one it is unless we ask.
+                // Actually, loadButtons returns buttons for the *current* page.
+                // We should probably ask the backend for the current page ID.
+                // For now, let's just assume the first one if not set, or add an endpoint.
+                // Or we can just rely on the user selecting one.
+                if (!this.currentPageId && this.pages.length > 0) {
+                    this.currentPageId = this.pages[0].id;
+                }
+            } catch (error) {
+                console.error('Failed to load pages:', error);
             }
         },
         async loadButtons() {
@@ -69,6 +91,39 @@ createApp({
             } catch (error) {
                 console.error('Failed to reconnect device:', error);
                 alert('Failed to reconnect to device');
+            }
+        },
+        async switchPage(pageId) {
+            try {
+                await axios.post(`/api/v1/pages/${pageId}/activate`);
+                this.currentPageId = pageId;
+                await this.loadButtons();
+            } catch (error) {
+                console.error('Failed to switch page:', error);
+            }
+        },
+        async createPage() {
+            if (!this.newPageTitle) return;
+            try {
+                const response = await axios.post('/api/v1/pages', null, { params: { title: this.newPageTitle } });
+                this.newPageTitle = '';
+                this.showPageModal = false;
+                await this.loadPages();
+                await this.switchPage(response.data.id);
+            } catch (error) {
+                console.error('Failed to create page:', error);
+            }
+        },
+        async deletePage(pageId) {
+            if (!confirm('Are you sure you want to delete this page?')) return;
+            try {
+                await axios.delete(`/api/v1/pages/${pageId}`);
+                await this.loadPages();
+                if (this.pages.length > 0) {
+                    await this.switchPage(this.pages[0].id);
+                }
+            } catch (error) {
+                console.error('Failed to delete page:', error);
             }
         },
         editButton(button) {
@@ -142,6 +197,7 @@ createApp({
     async mounted() {
         await this.loadDeviceInfo();
         await this.loadPlugins();
+        await this.loadPages();
         await this.loadButtons();
 
         // Auto-refresh device status every 30 seconds

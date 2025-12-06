@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from streamdeck_pi.core.button import Button, ButtonAction, ButtonActionType
 from streamdeck_pi.core.device import StreamDeckManager
 from streamdeck_pi.core.config import ConfigManager
+from streamdeck_pi.core.controller import DeckController
 from streamdeck_pi.plugins.base import PluginManager
 
 router = APIRouter()
@@ -46,6 +47,11 @@ class PluginInfo(BaseModel):
     icon: Optional[str] = None
     config_schema: Dict[str, Any]
 
+class PageInfo(BaseModel):
+    """Page information."""
+    id: str
+    title: str
+
 
 # Dependency to get managers
 def get_device_manager(request: Request) -> StreamDeckManager:
@@ -58,14 +64,9 @@ def get_plugin_manager(request: Request) -> PluginManager:
     return request.app.state.plugin_manager
 
 
-def get_config_manager(request: Request) -> ConfigManager:
-    """Get config manager from app state."""
-    return request.app.state.config_manager
-
-
-def get_button_configs(request: Request) -> Dict[int, Button]:
-    """Get button configurations from app state."""
-    return request.app.state.button_configs
+def get_deck_controller(request: Request) -> DeckController:
+    """Get deck controller from app state."""
+    return request.app.state.deck_controller
 
 
 # Device endpoints
@@ -111,22 +112,54 @@ async def set_brightness(
     return {"brightness": level}
 
 
+# Page endpoints
+@router.get("/pages", response_model=List[PageInfo])
+async def get_pages(controller: DeckController = Depends(get_deck_controller)):
+    """List all pages."""
+    return [PageInfo(id=p.id, title=p.title) for p in controller.config["pages"].values()]
+
+@router.post("/pages")
+async def create_page(title: str, controller: DeckController = Depends(get_deck_controller)):
+    """Create a new page."""
+    page_id = controller.create_page(title)
+    return {"id": page_id, "title": title}
+
+@router.delete("/pages/{page_id}")
+async def delete_page(page_id: str, controller: DeckController = Depends(get_deck_controller)):
+    """Delete a page."""
+    controller.delete_page(page_id)
+    return {"status": "deleted"}
+
+@router.post("/pages/{page_id}/activate")
+async def activate_page(page_id: str, controller: DeckController = Depends(get_deck_controller)):
+    """Switch to a page."""
+    controller.switch_page(page_id)
+    return {"status": "activated"}
+
+@router.put("/pages/{page_id}")
+async def update_page(page_id: str, title: str, controller: DeckController = Depends(get_deck_controller)):
+    """Update page details."""
+    controller.update_page(page_id, title)
+    return {"status": "updated"}
+
+
 # Button endpoints
 @router.get("/buttons")
 async def list_buttons(
     device_manager: StreamDeckManager = Depends(get_device_manager),
-    button_configs: Dict[int, Button] = Depends(get_button_configs)
+    controller: DeckController = Depends(get_deck_controller)
 ):
-    """List all buttons with their configurations."""
+    """List all buttons with their configurations for the current page."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
 
     key_count = device_manager.device_info["key_count"]
-
+    page = controller.get_current_page()
+    
     buttons = []
     for key in range(key_count):
-        if key in button_configs:
-            buttons.append(button_configs[key].to_dict())
+        if page and key in page.buttons:
+            buttons.append(page.buttons[key].to_dict())
         else:
             # Default empty button
             buttons.append(Button(key=key).to_dict())
@@ -137,11 +170,12 @@ async def list_buttons(
 @router.get("/buttons/{key}")
 async def get_button(
     key: int,
-    button_configs: Dict[int, Button] = Depends(get_button_configs)
+    controller: DeckController = Depends(get_deck_controller)
 ):
     """Get button configuration."""
-    if key in button_configs:
-        return button_configs[key].to_dict()
+    page = controller.get_current_page()
+    if page and key in page.buttons:
+        return page.buttons[key].to_dict()
     return Button(key=key).to_dict()
 
 
@@ -149,10 +183,8 @@ async def get_button(
 async def update_button(
     key: int,
     config: ButtonConfigRequest,
-    request: Request,
     device_manager: StreamDeckManager = Depends(get_device_manager),
-    plugin_manager: PluginManager = Depends(get_plugin_manager),
-    config_manager: ConfigManager = Depends(get_config_manager)
+    controller: DeckController = Depends(get_deck_controller)
 ):
     """Update button configuration."""
     if not device_manager.is_connected():
@@ -182,65 +214,21 @@ async def update_button(
         enabled=config.enabled
     )
 
-    # Store configuration
-    request.app.state.button_configs[key] = button
-    config_manager.save_buttons(request.app.state.button_configs)
-
-    # Update button display
-    if button.enabled and button.label:
-        device_manager.set_button_text(
-            key,
-            button.label,
-            font_size=button.font_size,
-            bg_color=button.bg_color,
-            text_color=button.text_color
-        )
-
-        # Register callback if action is configured
-        if button.action and button.action.plugin_id:
-            def button_callback(button_id: int):
-                # Get latest button config
-                current_button = request.app.state.button_configs.get(button_id)
-                if not current_button:
-                    return
-
-                plugin_manager.execute_plugin(
-                    current_button.action.plugin_id,
-                    button_id,
-                    config=current_button.action.config,
-                    context={
-                        "bg_color": current_button.bg_color,
-                        "text_color": current_button.text_color,
-                        "font_size": current_button.font_size
-                    }
-                )
-
-            device_manager.register_button_callback(key, button_callback)
-    else:
-        device_manager.clear_button(key)
-        device_manager.unregister_button_callback(key)
-
+    controller.update_button(key, button)
     return button.to_dict()
 
 
 @router.delete("/buttons/{key}")
 async def clear_button(
     key: int,
-    request: Request,
     device_manager: StreamDeckManager = Depends(get_device_manager),
-    config_manager: ConfigManager = Depends(get_config_manager)
+    controller: DeckController = Depends(get_deck_controller)
 ):
     """Clear button configuration."""
     if not device_manager.is_connected():
         raise HTTPException(status_code=503, detail="Device not connected")
 
-    device_manager.clear_button(key)
-    device_manager.unregister_button_callback(key)
-
-    if key in request.app.state.button_configs:
-        del request.app.state.button_configs[key]
-        config_manager.save_buttons(request.app.state.button_configs)
-
+    controller.clear_button(key)
     return {"status": "cleared"}
 
 
@@ -248,13 +236,14 @@ async def clear_button(
 async def press_button(
     key: int,
     plugin_manager: PluginManager = Depends(get_plugin_manager),
-    button_configs: Dict[int, Button] = Depends(get_button_configs)
+    controller: DeckController = Depends(get_deck_controller)
 ):
     """Simulate button press (for testing)."""
-    if key not in button_configs:
+    page = controller.get_current_page()
+    if not page or key not in page.buttons:
         raise HTTPException(status_code=404, detail="Button not configured")
 
-    button = button_configs[key]
+    button = page.buttons[key]
     if button.action and button.action.plugin_id:
         try:
             plugin_manager.execute_plugin(
