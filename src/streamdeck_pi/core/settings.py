@@ -22,8 +22,12 @@ class SettingsManager:
                 if p.exists():
                     self.config_path = str(p)
                     break
-
-        self.settings = self.load_settings()
+        
+        if not self.config_path:
+             logger.warning("No configuration file found in default locations.")
+             self.settings = {}
+        else:
+             self.settings = self.load_settings()
 
     def load_settings(self) -> Dict[str, Any]:
         """Load settings from file."""
