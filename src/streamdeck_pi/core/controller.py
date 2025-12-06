@@ -67,7 +67,25 @@ class DeckController:
             self.device.device.set_touchscreen_callback(self.on_touch)
             logger.info("Registered touchscreen callback")
         else:
-            logger.warning("Device does not support set_touchscreen_callback")
+            # Fallback: Try to register callback for keys 8 and 9 (Neo touch zones)
+            # Some libraries map touch zones to extra keys
+            logger.warning("Device does not support set_touchscreen_callback, trying key callbacks for touch zones")
+            try:
+                self.device.register_button_callback(8, lambda k: self.on_touch_key(8))
+                self.device.register_button_callback(9, lambda k: self.on_touch_key(9))
+                logger.info("Registered fallback key callbacks for touch zones")
+            except Exception as e:
+                logger.warning(f"Failed to register fallback key callbacks: {e}")
+
+    def on_touch_key(self, key):
+        """Handle touch events mapped to keys."""
+        logger.info(f"Touch key pressed: {key}")
+        if key == 8:
+            logger.info("Left touch detected (via key)")
+            self.prev_page()
+        elif key == 9:
+            logger.info("Right touch detected (via key)")
+            self.next_page()
 
     def on_touch(self, deck, event):
         """Handle touch events."""
@@ -195,6 +213,9 @@ class DeckController:
 
         draw.text((x, y), text, font=font, fill="white")
 
+        # Rotate image 180 degrees if needed (Neo screens are often inverted)
+        image = image.rotate(180)
+
         # Convert to native format and set
         try:
             if is_neo:
@@ -280,6 +301,17 @@ class DeckController:
     def on_key_press(self, key: int):
         """Handle key press."""
         logger.info(f"Key pressed: {key}")
+
+        # Check for Neo touch keys (if they come through as regular keys)
+        if key == 8:
+            logger.info("Left touch detected (via key press)")
+            self.prev_page()
+            return
+        elif key == 9:
+            logger.info("Right touch detected (via key press)")
+            self.next_page()
+            return
+
         page = self.get_current_page()
         if not page:
             return
