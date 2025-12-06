@@ -187,8 +187,9 @@ class StreamDeckManager:
             icon_h = bbox_icon[3] - bbox_icon[1]
 
             # Position icon slightly above center
+            # Move icon down slightly to reduce gap
             icon_x = (image.width - icon_w) / 2
-            icon_y = (image.height / 2 - icon_h) / 2 + 5 # Slight offset
+            icon_y = (image.height / 2 - icon_h) / 2 + 10
 
             draw.text((icon_x, icon_y), icon, font=icon_font, fill=text_color)
 
@@ -198,7 +199,8 @@ class StreamDeckManager:
             text_h = bbox_text[3] - bbox_text[1]
 
             text_x = (image.width - text_w) / 2
-            text_y = image.height - text_h - 5 # 5px padding from bottom
+            # Move text up slightly to reduce gap
+            text_y = image.height - text_h - 10
 
             draw.text((text_x, text_y), text, font=text_font, fill=text_color)
 
