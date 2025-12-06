@@ -13,7 +13,9 @@ createApp({
       newPageTitle: '',
       showPageModal: false,
       showMoveModal: false,
-      movingButton: null
+      movingButton: null,
+      editingPage: null,
+      showEditPageModal: false
     };
   },
   computed: {
@@ -102,98 +104,128 @@ createApp({
         await this.loadButtons();
       } catch (error) {
         console.error('Failed to switch page:', error);
-      }
-    },
     async createPage() {
-      if (!this.newPageTitle) return;
-      try {
-        const response = await axios.post('/api/v1/pages', null, { params: { title: this.newPageTitle } });
-        this.newPageTitle = '';
-        this.showPageModal = false;
-        await this.loadPages();
-        await this.switchPage(response.data.id);
-      } catch (error) {
-        console.error('Failed to create page:', error);
-      }
-    },
+          if (!this.newPageTitle) return;
+          try {
+            const response = await axios.post('/api/v1/pages', null, { params: { title: this.newPageTitle } });
+            this.newPageTitle = '';
+            this.showPageModal = false;
+            await this.loadPages();
+            await this.switchPage(response.data.id);
+          } catch (error) {
+            console.error('Failed to create page:', error);
+          }
+        },
+        editPage() {
+          const page = this.pages.find(p => p.id === this.currentPageId);
+          if (!page) return;
+
+          this.editingPage = {
+            id: page.id,
+            title: page.title,
+            bg_color: this.rgbToHex(page.bg_color),
+            text_color: this.rgbToHex(page.text_color)
+          };
+          this.showEditPageModal = true;
+        },
+    async savePage() {
+          try {
+            const data = {
+              title: this.editingPage.title,
+              bg_color: this.editingPage.bg_color ? this.hexToRgb(this.editingPage.bg_color) : null,
+              text_color: this.editingPage.text_color ? this.hexToRgb(this.editingPage.text_color) : null
+            };
+
+            await axios.put(`/api/v1/pages/${this.editingPage.id}`, data);
+            this.showEditPageModal = false;
+            await this.loadPages();
+            // Reload buttons to reflect color changes if they were using defaults
+            await this.loadButtons();
+          } catch (error) {
+            console.error('Failed to save page:', error);
+            alert('Failed to save page settings');
+          }
+        },
     async deletePage(pageId) {
-      if (!confirm('Are you sure you want to delete this page?')) return;
-      try {
-        await axios.delete(`/api/v1/pages/${pageId}`);
-        await this.loadPages();
-        if (this.pages.length > 0) {
-          await this.switchPage(this.pages[0].id);
-        }
-      } catch (error) {
-        console.error('Failed to delete page:', error);
-      }
-    },
-    editButton(button) {
-      // Create a copy for editing
-      this.editingButton = {
-        key: button.key,
-        label: button.label || '',
-        icon: button.icon || '',
-        enabled: button.enabled,
-        font_size: button.font_size || 14,
-        bg_color: this.rgbToHex(button.bg_color || [0, 0, 0]),
-        text_color: this.rgbToHex(button.text_color || [255, 255, 255]),
-        selectedPlugin: button.action?.plugin_id || '',
-        config: button.action?.config || {}
-      };
-    },
-    closeEditor() {
-      this.editingButton = null;
-    },
-    onPluginChange() {
-      // Reset config when plugin changes
-      if (this.selectedPluginInfo) {
-        this.editingButton.config = {};
-      }
-    },
+        },
+    async deletePage(pageId) {
+          if (!confirm('Are you sure you want to delete this page?')) return;
+          try {
+            await axios.delete(`/api/v1/pages/${pageId}`);
+            await this.loadPages();
+            if (this.pages.length > 0) {
+              await this.switchPage(this.pages[0].id);
+            }
+          } catch (error) {
+            console.error('Failed to delete page:', error);
+          }
+        },
+        editButton(button) {
+          // Create a copy for editing
+          this.editingButton = {
+            key: button.key,
+            label: button.label || '',
+            icon: button.icon || '',
+            enabled: button.enabled,
+            font_size: button.font_size || 14,
+            bg_color: this.rgbToHex(button.bg_color || [0, 0, 0]),
+            text_color: this.rgbToHex(button.text_color || [255, 255, 255]),
+            selectedPlugin: button.action?.plugin_id || '',
+            config: button.action?.config || {}
+          };
+        },
+        closeEditor() {
+          this.editingButton = null;
+        },
+        onPluginChange() {
+          // Reset config when plugin changes
+          if (this.selectedPluginInfo) {
+            this.editingButton.config = {};
+          }
+        },
     async saveButton() {
-      try {
-        const data = {
-          label: this.editingButton.label,
-          icon: this.editingButton.icon,
-          action_type: this.editingButton.selectedPlugin ? 'plugin' : 'none',
-          plugin_id: this.editingButton.selectedPlugin || null,
-          config: this.editingButton.config,
-          font_size: this.editingButton.font_size,
-          bg_color: this.hexToRgb(this.editingButton.bg_color),
-          text_color: this.hexToRgb(this.editingButton.text_color),
-          enabled: this.editingButton.enabled
-        };
+          try {
+            const data = {
+              label: this.editingButton.label,
+              icon: this.editingButton.icon,
+              action_type: this.editingButton.selectedPlugin ? 'plugin' : 'none',
+              plugin_id: this.editingButton.selectedPlugin || null,
+              config: this.editingButton.config,
+              font_size: this.editingButton.font_size,
+              bg_color: this.hexToRgb(this.editingButton.bg_color),
+              text_color: this.hexToRgb(this.editingButton.text_color),
+              enabled: this.editingButton.enabled
+            };
 
-        await axios.put(`/api/v1/buttons/${this.editingButton.key}`, data);
-        await this.loadButtons();
-        this.closeEditor();
-      } catch (error) {
-        console.error('Failed to save button:', error);
-        alert('Failed to save button configuration');
-      }
-    },
+            await axios.put(`/api/v1/buttons/${this.editingButton.key}`, data);
+            await this.loadButtons();
+            this.closeEditor();
+          } catch (error) {
+            console.error('Failed to save button:', error);
+            alert('Failed to save button configuration');
+          }
+        },
     async clearButton() {
-      if (!confirm('Clear this button?')) return;
+          if (!confirm('Clear this button?')) return;
 
-      try {
-        await axios.delete(`/api/v1/buttons/${this.editingButton.key}`);
-        await this.loadButtons();
-        this.closeEditor();
-      } catch (error) {
-        console.error('Failed to clear button:', error);
-        alert('Failed to clear button');
-      }
-    },
+          try {
+            await axios.delete(`/api/v1/buttons/${this.editingButton.key}`);
+            await this.loadButtons();
+            this.closeEditor();
+          } catch (error) {
+            console.error('Failed to clear button:', error);
+            alert('Failed to clear button');
+          }
+        },
     async testButton() {
-      try {
-        await axios.post(`/api/v1/buttons/${this.editingButton.key}/press`);
-      } catch (error) {
-        console.error('Failed to test button:', error);
-        alert('Failed to test button: ' + (error.response?.data?.detail || error.message));
-      }
-    },
-    getPluginName(pluginId) {
+          try {
+            await axios.post(`/api/v1/buttons/${this.editingButton.key}/press`);
+          } catch (error) {
+            console.error('Failed to test button:', error);
+            alert('Failed to test button: ' + (error.response?.data?.detail || error.message));
+          }
+        },
+        getPluginName(pluginId) {
           const plugin = this.plugins.find(p => p.id === pluginId);
           return plugin ? plugin.name : pluginId;
         },

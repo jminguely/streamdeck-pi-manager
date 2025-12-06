@@ -131,13 +131,22 @@ class DeckController:
 
         for key, button in page.buttons.items():
             if button.enabled:
+                # Use button colors if set, otherwise use page colors, otherwise default
+                bg_color = button.bg_color
+                if bg_color == (0, 0, 0) and page.bg_color:
+                    bg_color = page.bg_color
+
+                text_color = button.text_color
+                if text_color == (255, 255, 255) and page.text_color:
+                    text_color = page.text_color
+
                 self.device.set_button_text(
                     key,
                     button.label,
                     icon=button.icon,
                     font_size=button.font_size,
-                    bg_color=button.bg_color,
-                    text_color=button.text_color
+                    bg_color=bg_color,
+                    text_color=text_color
                 )
                 # TODO: Handle icons
 
@@ -168,8 +177,12 @@ class DeckController:
         width = 248
         height = 58
 
+        # Determine colors
+        bg_color = page.bg_color if page.bg_color else (0, 0, 0)
+        text_color = page.text_color if page.text_color else (255, 255, 255)
+
         # Use RGBA for transparency support if needed, though RGB is usually fine
-        image = Image.new('RGB', (width, height), 'black')
+        image = Image.new('RGB', (width, height), bg_color)
         draw = ImageDraw.Draw(image)
 
         # Draw Page Title
@@ -202,12 +215,13 @@ class DeckController:
         x = (width - text_width) / 2
         y = (height - text_height) / 2
 
-        draw.text((x, y), text, font=font, fill="white")
+        # Draw text
+        draw.text((x, y), text, font=font, fill=text_color)
 
-        # Rotate image 180 degrees if needed (Neo screens are often inverted)
+        # Rotate 180 degrees
         image = image.rotate(180)
 
-        # Convert to native format and set
+        # Convert to native format and send
         try:
             if is_neo:
                 # Manual implementation for Neo
@@ -404,13 +418,22 @@ class DeckController:
         self.config_manager.save_config(self.config)
 
         if button.enabled:
+            # Use button colors if set, otherwise use page colors
+            bg_color = button.bg_color
+            if bg_color == (0, 0, 0) and page.bg_color:
+                bg_color = page.bg_color
+
+            text_color = button.text_color
+            if text_color == (255, 255, 255) and page.text_color:
+                text_color = page.text_color
+
             self.device.set_button_text(
                 key,
                 button.label,
                 icon=button.icon,
                 font_size=button.font_size,
-                bg_color=button.bg_color,
-                text_color=button.text_color
+                bg_color=bg_color,
+                text_color=text_color
             )
         else:
             self.device.clear_button(key)

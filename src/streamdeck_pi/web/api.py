@@ -51,6 +51,15 @@ class PageInfo(BaseModel):
     """Page information."""
     id: str
     title: str
+    bg_color: Optional[List[int]] = None
+    text_color: Optional[List[int]] = None
+
+
+class PageUpdateRequest(BaseModel):
+    """Page update request."""
+    title: str
+    bg_color: Optional[List[int]] = None
+    text_color: Optional[List[int]] = None
 
 
 class SwapButtonRequest(BaseModel):
@@ -151,9 +160,25 @@ async def activate_page(page_id: str, controller: DeckController = Depends(get_d
     return {"status": "activated"}
 
 @router.put("/pages/{page_id}")
-async def update_page(page_id: str, title: str, controller: DeckController = Depends(get_deck_controller)):
+async def update_page(
+    page_id: str,
+    req: PageUpdateRequest,
+    controller: DeckController = Depends(get_deck_controller)
+):
     """Update page details."""
-    controller.update_page(page_id, title)
+    config = controller.config_manager.load_config()
+    pages = config.get("pages", {})
+    page = pages.get(page_id)
+
+    if not page:
+        raise HTTPException(status_code=404, detail="Page not found")
+
+    page.title = req.title
+    page.bg_color = tuple(req.bg_color) if req.bg_color else None
+    page.text_color = tuple(req.text_color) if req.text_color else None
+
+    controller.config_manager.save_config(config)
+    controller.render_current_page()
     return {"status": "updated"}
 
 
@@ -295,18 +320,20 @@ async def swap_buttons(
     if not b1 and not b2:
         return {"status": "ok"}
 
+    # Remove from dict first to avoid collision
+    if req.key1 in page.buttons:
+        del page.buttons[req.key1]
+    if req.key2 in page.buttons:
+        del page.buttons[req.key2]
+
     # Perform swap
     if b1:
         b1.key = req.key2
         page.buttons[req.key2] = b1
-    elif req.key2 in page.buttons:
-        del page.buttons[req.key2]
 
     if b2:
         b2.key = req.key1
         page.buttons[req.key1] = b2
-    elif req.key1 in page.buttons:
-        del page.buttons[req.key1]
 
     deck_controller.config_manager.save_config(config)
     deck_controller.render_current_page()

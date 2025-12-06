@@ -13,12 +13,16 @@ class Page:
     id: str
     title: str
     buttons: Dict[int, Button] = field(default_factory=dict)
+    bg_color: Optional[tuple] = None
+    text_color: Optional[tuple] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "id": self.id,
             "title": self.title,
-            "buttons": {str(k): v.to_dict() for k, v in self.buttons.items()}
+            "buttons": {str(k): v.to_dict() for k, v in self.buttons.items()},
+            "bg_color": self.bg_color,
+            "text_color": self.text_color
         }
 
     @classmethod
@@ -26,10 +30,21 @@ class Page:
         buttons = {}
         for k, v in data.get("buttons", {}).items():
             buttons[int(k)] = Button.from_dict(v)
+
+        bg_color = data.get("bg_color")
+        if bg_color:
+            bg_color = tuple(bg_color)
+
+        text_color = data.get("text_color")
+        if text_color:
+            text_color = tuple(text_color)
+
         return cls(
             id=data.get("id", "default"),
             title=data.get("title", "Default"),
-            buttons=buttons
+            buttons=buttons,
+            bg_color=bg_color,
+            text_color=text_color
         )
 
 class ConfigManager:
