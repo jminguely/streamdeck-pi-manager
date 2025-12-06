@@ -17,30 +17,30 @@ class DeckController:
         self.config_manager = config_manager
         self.plugin_manager = plugin_manager
         self.config = self.config_manager.load_config()
-        
+
     def start(self):
         """Start the controller."""
         if self.device.connect():
             self.setup_callbacks()
             self.render_current_page()
-            
+
             # Debug device capabilities
             if self.device.device:
                 logger.info(f"Device type: {self.device.device.deck_type()}")
                 logger.info(f"Has set_touchscreen_image: {hasattr(self.device.device, 'set_touchscreen_image')}")
                 logger.info(f"Has set_touchscreen_callback: {hasattr(self.device.device, 'set_touchscreen_callback')}")
                 logger.info(f"Key count: {self.device.device.key_count()}")
-            
+
     def stop(self):
         """Stop the controller."""
         self.device.disconnect()
-        
+
     def setup_callbacks(self):
         """Register callbacks for all keys."""
         key_count = self.device.get_device_info().get("key_count", 0)
         for key in range(key_count):
             self.device.register_button_callback(key, self.on_key_press)
-            
+
         # Register touch callback if available (for Neo)
         if hasattr(self.device.device, 'set_touchscreen_callback'):
             self.device.device.set_touchscreen_callback(self.on_touch)
@@ -52,10 +52,10 @@ class DeckController:
         """Handle touch events."""
         # event is a dict with 'x', 'y', 'interaction' (press/release/drag)
         logger.info(f"Touch event: {event}")
-        
+
         x = event.get('x')
         interaction = event.get('interaction') # 'short' (tap), 'long', 'drag'
-        
+
         # Neo Info Bar resolution is approx 248x58
         # Left button area
         if x < 60 and interaction == 'short':
@@ -68,7 +68,7 @@ class DeckController:
         """Get the current page object."""
         page_id = self.config.get("current_page_id")
         return self.config.get("pages", {}).get(page_id)
-        
+
     def render_current_page(self):
         """Render the current page to the device."""
         if not self.device.is_connected():
@@ -77,12 +77,12 @@ class DeckController:
         page = self.get_current_page()
         if not page:
             return
-            
+
         self.device.clear_all_buttons()
-        
+
         # Update Info Screen (Neo)
         self.update_info_screen()
-        
+
         for key, button in page.buttons.items():
             if button.enabled:
                 self.device.set_button_text(
@@ -93,7 +93,7 @@ class DeckController:
                     text_color=button.text_color
                 )
                 # TODO: Handle icons
-                
+
     def update_info_screen(self):
         """Update the info screen (Neo specific)."""
         # Check if device supports touchscreen
@@ -117,28 +117,28 @@ class DeckController:
         # Neo info screen is 248x58 px
         width = 248
         height = 58
-        
+
         image = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(image)
-        
+
         # Draw Page Title
         try:
             font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 16)
         except:
             font = ImageFont.load_default()
-            
+
         text = f"{page.title} ({current_idx}/{total_pages})"
-        
+
         # Center text
         bbox = draw.textbbox((0, 0), text, font=font)
         text_width = bbox[2] - bbox[0]
         text_height = bbox[3] - bbox[1]
-        
+
         x = (width - text_width) / 2
         y = (height - text_height) / 2
-        
+
         draw.text((x, y), text, font=font, fill="white")
-        
+
         # Convert to native format and set
         try:
             from StreamDeck.ImageHelpers import PILHelper
@@ -153,19 +153,19 @@ class DeckController:
         page = self.get_current_page()
         if not page:
             return
-            
+
         # Check if this key is a "special" key for paging?
         # For Neo, if the side buttons are keys, we need to know their IDs.
         # Usually Neo has 8 keys (0-7).
         # If side buttons are keys, they might be 8 and 9?
         # Or maybe they are not keys.
-        
+
         # Let's assume for now we use keys 0 and 1 for paging if configured?
         # No, the user wants to use the specific buttons.
-        
+
         # If the device is Neo, we might need to handle touch events or specific keys.
         # Since we don't know the key IDs, we can't hardcode them yet.
-        
+
         button = page.buttons.get(key)
         if button and button.action and button.action.plugin_id:
             self.plugin_manager.execute_plugin(
@@ -178,7 +178,7 @@ class DeckController:
                     "font_size": button.font_size
                 }
             )
-            
+
     def next_page(self):
         """Switch to next page."""
         pages = list(self.config["pages"].keys())
@@ -246,10 +246,10 @@ class DeckController:
         page = self.get_current_page()
         if not page:
             return
-        
+
         page.buttons[key] = button
         self.config_manager.save_config(self.config)
-        
+
         if button.enabled:
             self.device.set_button_text(
                 key,
@@ -266,7 +266,7 @@ class DeckController:
         page = self.get_current_page()
         if not page:
             return
-            
+
         if key in page.buttons:
             del page.buttons[key]
             self.config_manager.save_config(self.config)
