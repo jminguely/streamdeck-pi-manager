@@ -11,6 +11,7 @@ import logging
 from streamdeck_pi.web.api import router as api_router
 from streamdeck_pi.core.device import StreamDeckManager
 from streamdeck_pi.core.config import ConfigManager
+from streamdeck_pi.core.settings import SettingsManager
 from streamdeck_pi.core.controller import DeckController
 from streamdeck_pi.plugins.base import PluginManager
 from streamdeck_pi.plugins import system, network, homeassistant
@@ -37,8 +38,9 @@ def create_app() -> FastAPI:
     )
 
     # Initialize managers
+    settings_manager = SettingsManager()
     device_manager = StreamDeckManager()
-    plugin_manager = PluginManager(device_manager=device_manager)
+    plugin_manager = PluginManager(device_manager=device_manager, global_settings=settings_manager.settings)
 
     # Determine config path
     config_path = Path("/etc/streamdeck-pi/buttons.json")
@@ -63,6 +65,7 @@ def create_app() -> FastAPI:
     plugin_manager.register_plugin(network.ToggleWiFiPlugin)
     plugin_manager.register_plugin(network.PingHostPlugin)
     plugin_manager.register_plugin(homeassistant.HomeAssistantPlugin)
+    plugin_manager.register_plugin(homeassistant.HomeAssistantSensorPlugin)
 
     # Store in app state
     app.state.device_manager = device_manager
