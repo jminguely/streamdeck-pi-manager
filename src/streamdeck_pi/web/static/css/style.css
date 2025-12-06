@@ -188,6 +188,34 @@ main {
     margin-top: 0.5rem;
 }
 
+.button-move {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+    z-index: 10;
+    color: var(--text-light);
+}
+
+.button-slot:hover .button-move {
+    opacity: 1;
+}
+
+.button-move:hover {
+    background: var(--primary-color);
+    transform: scale(1.1);
+}
+
 /* Modal */
 .modal {
     position: fixed;
