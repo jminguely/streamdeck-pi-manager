@@ -155,7 +155,7 @@ async def list_buttons(
 
     key_count = device_manager.device_info["key_count"]
     page = controller.get_current_page()
-    
+
     buttons = []
     for key in range(key_count):
         if page and key in page.buttons:

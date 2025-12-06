@@ -47,7 +47,7 @@ def create_app() -> FastAPI:
         config_path = Path("buttons.json")
 
     config_manager = ConfigManager(config_path=str(config_path))
-    
+
     # Initialize Deck Controller
     deck_controller = DeckController(device_manager, config_manager, plugin_manager)
 

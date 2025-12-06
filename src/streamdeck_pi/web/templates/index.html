@@ -42,13 +42,30 @@
 
           <div class="control-group">
             <label>Page</label>
-            <select v-model="currentPageId" @change="switchPage(currentPageId)" style="margin-right: 5px; padding: 5px;">
+            <select
+              v-model="currentPageId"
+              @change="switchPage(currentPageId)"
+              style="margin-right: 5px; padding: 5px"
+            >
               <option v-for="page in pages" :key="page.id" :value="page.id">
                 {{ page.title }}
               </option>
             </select>
-            <button @click="showPageModal = true" class="btn btn-sm" title="Add Page">+</button>
-            <button @click="deletePage(currentPageId)" class="btn btn-sm btn-danger" :disabled="pages.length <= 1" title="Delete Page">-</button>
+            <button
+              @click="showPageModal = true"
+              class="btn btn-sm"
+              title="Add Page"
+            >
+              +
+            </button>
+            <button
+              @click="deletePage(currentPageId)"
+              class="btn btn-sm btn-danger"
+              :disabled="pages.length <= 1"
+              title="Delete Page"
+            >
+              -
+            </button>
           </div>
 
           <button @click="reconnectDevice" class="btn btn-secondary">
@@ -179,20 +196,34 @@
         </div>
 
         <!-- Page Modal -->
-        <div class="modal" v-if="showPageModal" @click.self="showPageModal = false">
+        <div
+          class="modal"
+          v-if="showPageModal"
+          @click.self="showPageModal = false"
+        >
           <div class="modal-content">
             <div class="modal-header">
               <h2>New Page</h2>
-              <button class="close" @click="showPageModal = false">&times;</button>
+              <button class="close" @click="showPageModal = false">
+                &times;
+              </button>
             </div>
             <div class="modal-body">
               <div class="form-group">
                 <label>Page Title</label>
-                <input type="text" v-model="newPageTitle" class="form-control" @keyup.enter="createPage" placeholder="Enter page title">
+                <input
+                  type="text"
+                  v-model="newPageTitle"
+                  class="form-control"
+                  @keyup.enter="createPage"
+                  placeholder="Enter page title"
+                />
               </div>
             </div>
             <div class="modal-footer">
-              <button @click="createPage" class="btn btn-primary">Create Page</button>
+              <button @click="createPage" class="btn btn-primary">
+                Create Page
+              </button>
             </div>
           </div>
         </div>
