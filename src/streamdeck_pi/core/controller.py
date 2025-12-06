@@ -276,29 +276,7 @@ class DeckController:
 
             bytes_remaining -= this_length
             page_number += 1
-            # Neo expects a specific format for the touchscreen image
-            # It seems the library handles conversion, but let's ensure we are passing the right thing.
-            # Some versions of the library might need explicit format conversion or sizing.
 
-            # Log that we are attempting to set the image
-            logger.info(f"Setting info screen image: {width}x{height}")
-
-            native_image = PILHelper.to_native_format(self.device.device, image)
-
-            # Debug native image
-            if native_image:
-                logger.info(f"Native image type: {type(native_image)}")
-                if hasattr(native_image, '__len__'):
-                    logger.info(f"Native image length: {len(native_image)}")
-            else:
-                logger.error("Native image is None!")
-
-            self.device.device.set_touchscreen_image(native_image)
-            logger.info("Info screen updated successfully")
-        except Exception as e:
-            logger.error(f"Failed to update info screen: {e}")
-            import traceback
-            logger.error(traceback.format_exc())
     def on_key_press(self, key: int):
         """Handle key press."""
         logger.info(f"Key pressed: {key}")
