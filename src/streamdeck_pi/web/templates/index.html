@@ -113,6 +113,17 @@
               </div>
 
               <div class="form-group">
+                <label>Icon (Emoji or Character)</label>
+                <input
+                  type="text"
+                  v-model="editingButton.icon"
+                  class="form-control"
+                  maxlength="1"
+                  placeholder="e.g. 🏠 or A"
+                />
+              </div>
+
+              <div class="form-group">
                 <label>Plugin</label>
                 <select
                   v-model="editingButton.selectedPlugin"

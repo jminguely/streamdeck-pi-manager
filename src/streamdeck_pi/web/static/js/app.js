@@ -131,6 +131,7 @@ createApp({
       this.editingButton = {
         key: button.key,
         label: button.label || '',
+        icon: button.icon || '',
         enabled: button.enabled,
         font_size: button.font_size || 14,
         bg_color: button.bg_color || [0, 0, 0],
@@ -152,6 +153,7 @@ createApp({
       try {
         const data = {
           label: this.editingButton.label,
+          icon: this.editingButton.icon,
           action_type: this.editingButton.selectedPlugin ? 'plugin' : 'none',
           plugin_id: this.editingButton.selectedPlugin || null,
           config: this.editingButton.config,

@@ -41,6 +41,8 @@ def install_dependencies():
         "libjpeg-dev",
         "zlib1g-dev",
         "libopenjp2-7",
+        "fonts-noto",
+        "fonts-noto-emoji",
     ]
 
     run_command(["apt", "install", "-y"] + packages)

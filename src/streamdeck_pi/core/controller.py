@@ -81,16 +81,6 @@ class DeckController:
         except Exception as e:
             logger.warning(f"Could not register keys 8/9: {e}")
 
-    def on_touch_key(self, key):
-        """Handle touch events mapped to keys."""
-        logger.info(f"Touch key pressed: {key}")
-        if key == 8:
-            logger.info("Left touch detected (via key)")
-            self.prev_page()
-        elif key == 9:
-            logger.info("Right touch detected (via key)")
-            self.next_page()
-
     def on_touch(self, deck, event):
         """Handle touch events."""
         try:
@@ -144,6 +134,7 @@ class DeckController:
                 self.device.set_button_text(
                     key,
                     button.label,
+                    icon=button.icon,
                     font_size=button.font_size,
                     bg_color=button.bg_color,
                     text_color=button.text_color
@@ -178,12 +169,8 @@ class DeckController:
         height = 58
 
         # Use RGBA for transparency support if needed, though RGB is usually fine
-        # Use RED background to verify visibility
         image = Image.new('RGB', (width, height), 'black')
         draw = ImageDraw.Draw(image)
-
-        # Draw a white border to verify display is working
-        draw.rectangle([(0, 0), (width-1, height-1)], outline="white", width=2)
 
         # Draw Page Title
         try:
@@ -420,6 +407,7 @@ class DeckController:
             self.device.set_button_text(
                 key,
                 button.label,
+                icon=button.icon,
                 font_size=button.font_size,
                 bg_color=button.bg_color,
                 text_color=button.text_color

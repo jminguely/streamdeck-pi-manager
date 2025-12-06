@@ -9,6 +9,7 @@ from StreamDeck.Devices.StreamDeck import StreamDeck
 from StreamDeck.ImageHelpers import PILHelper
 from PIL import Image, ImageDraw, ImageFont
 import threading
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +94,7 @@ class StreamDeckManager:
 
         brightness = max(0, min(100, brightness))
         self.device.set_brightness(brightness)
-        logger.debug(f"Brightness set to {brightness}%")
+        logger.info(f"Brightness set to {brightness}%")
 
     def set_button_image(self, key: int, image: Image.Image):
         """
@@ -111,15 +112,16 @@ class StreamDeckManager:
             native_image = PILHelper.to_native_format(self.device, image)
             self.device.set_key_image(key, native_image)
 
-    def set_button_text(self, key: int, text: str, font_size: int = 14,
+    def set_button_text(self, key: int, text: str, icon: Optional[str] = None, font_size: int = 14,
                        bg_color: tuple = (0, 0, 0), text_color: tuple = (255, 255, 255)):
         """
-        Set text on a button.
+        Set text and icon on a button.
 
         Args:
             key: Button index
             text: Text to display
-            font_size: Font size
+            icon: Icon character (emoji or text)
+            font_size: Font size for text
             bg_color: Background color (R, G, B)
             text_color: Text color (R, G, B)
         """
@@ -133,24 +135,83 @@ class StreamDeckManager:
         # Fill background
         draw.rectangle([(0, 0), image.size], fill=bg_color)
 
-        # Try to load font, fallback to default
-        try:
-            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", font_size)
-        except:
+        # Determine project root to find assets
+        # src/streamdeck_pi/core/device.py -> ../../../
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.abspath(os.path.join(current_dir, "../../../"))
+        assets_font_dir = os.path.join(project_root, "assets", "fonts")
+
+        # Load Fonts
+        # Text Font (Noto Sans)
+        text_font = None
+        text_font_paths = [
+            os.path.join(assets_font_dir, "Noto_Sans/static/NotoSans-Regular.ttf"),
+            "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/System/Library/Fonts/Helvetica.ttc"
+        ]
+        for path in text_font_paths:
             try:
-                font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
+                text_font = ImageFont.truetype(path, font_size)
+                break
             except:
-                font = ImageFont.load_default()
+                continue
+        if not text_font:
+            text_font = ImageFont.load_default()
 
-        # Center text
-        bbox = draw.textbbox((0, 0), text, font=font)
-        text_width = bbox[2] - bbox[0]
-        text_height = bbox[3] - bbox[1]
+        # Icon Font (Noto Emoji or Noto Sans)
+        icon_font = None
+        if icon:
+            icon_size = int(image.height * 0.5) # Icon takes up half the height
+            icon_font_paths = [
+                os.path.join(assets_font_dir, "Noto_Emoji/static/NotoEmoji-Regular.ttf"),
+                "/usr/share/fonts/truetype/noto/NotoEmoji-Regular.ttf", # Monochrome emoji
+                "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+                "/System/Library/Fonts/Apple Color Emoji.ttc" # macOS fallback
+            ]
+            for path in icon_font_paths:
+                try:
+                    icon_font = ImageFont.truetype(path, icon_size)
+                    break
+                except:
+                    continue
+            if not icon_font:
+                icon_font = ImageFont.load_default()
 
-        x = (image.width - text_width) / 2
-        y = (image.height - text_height) / 2
+        # Draw Content
+        if icon:
+            # Draw Icon (Centered horizontally, Top half)
+            bbox_icon = draw.textbbox((0, 0), icon, font=icon_font)
+            icon_w = bbox_icon[2] - bbox_icon[0]
+            icon_h = bbox_icon[3] - bbox_icon[1]
 
-        draw.text((x, y), text, font=font, fill=text_color)
+            # Position icon slightly above center
+            icon_x = (image.width - icon_w) / 2
+            icon_y = (image.height / 2 - icon_h) / 2 + 5 # Slight offset
+
+            draw.text((icon_x, icon_y), icon, font=icon_font, fill=text_color)
+
+            # Draw Text (Centered horizontally, Bottom half)
+            bbox_text = draw.textbbox((0, 0), text, font=text_font)
+            text_w = bbox_text[2] - bbox_text[0]
+            text_h = bbox_text[3] - bbox_text[1]
+
+            text_x = (image.width - text_w) / 2
+            text_y = image.height - text_h - 5 # 5px padding from bottom
+
+            draw.text((text_x, text_y), text, font=text_font, fill=text_color)
+
+        else:
+            # Center text only
+            bbox = draw.textbbox((0, 0), text, font=text_font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+
+            x = (image.width - text_width) / 2
+            y = (image.height - text_height) / 2
+
+            draw.text((x, y), text, font=text_font, fill=text_color)
 
         self.set_button_image(key, image)
 
@@ -188,15 +249,13 @@ class StreamDeckManager:
     def _handle_key_press(self, deck, key: int, state: bool):
         """Internal handler for key press events."""
         if state:  # Only handle key press, not release
-            logger.info(f"Raw Button {key} pressed")
+            logger.debug(f"Button {key} pressed")
 
             if key in self.button_callbacks:
                 try:
                     self.button_callbacks[key](key)
                 except Exception as e:
                     logger.error(f"Error in button callback for key {key}: {e}")
-            else:
-                logger.warning(f"No callback registered for key {key}")
 
     def __enter__(self):
         """Context manager entry."""
