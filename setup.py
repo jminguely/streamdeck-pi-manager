@@ -64,6 +64,8 @@ setup(
         "passlib[bcrypt]>=1.7.4",
         "psutil>=5.9.0",
         "aiofiles>=23.0.0",
+        "soco>=0.29.0",
+        "httpx>=0.25.0",
     ],
     extras_require={
         "dev": [

@@ -14,7 +14,7 @@ from streamdeck_pi.core.config import ConfigManager
 from streamdeck_pi.core.settings import SettingsManager
 from streamdeck_pi.core.controller import DeckController
 from streamdeck_pi.plugins.base import PluginManager
-from streamdeck_pi.plugins import system, network, homeassistant
+from streamdeck_pi.plugins import system, network, homeassistant, sonos
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +66,7 @@ def create_app() -> FastAPI:
     plugin_manager.register_plugin(network.PingHostPlugin)
     plugin_manager.register_plugin(homeassistant.HomeAssistantPlugin)
     plugin_manager.register_plugin(homeassistant.HomeAssistantSensorPlugin)
+    plugin_manager.register_plugin(sonos.SonosGroupTogglePlugin)
 
     # Store in app state
     app.state.device_manager = device_manager

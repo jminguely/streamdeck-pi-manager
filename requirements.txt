@@ -28,4 +28,7 @@ aiofiles>=23.0.0
 # WebSocket support
 websockets>=12.0
 requests>=2.31.0
-requests>=2.31.0
+httpx>=0.25.0
+
+# Sonos control
+soco>=0.29.0

@@ -37,8 +37,8 @@
 - **Impact:** Critical for new installations.
 - **Fix:** Removed redundant heavy system font dependencies since they are bundled in the project assets.
 
-### 7. Installation: Externally Managed Environment (PEP 668)
-- **Location:** `install.py`
-- **Issue:** Modern Debian versions prevent `pip` from installing into the system Python, causing the installer to fail.
-- **Impact:** Critical for new installations.
-- **Fix:** Redesigned `install.py` to create a dedicated virtual environment in `/opt/streamdeck-pi/venv` and updated the systemd service to use it. This isolates the application dependencies from the system Python.
+### 8. Feature: Sonos Group Management
+- **Location:** `src/streamdeck_pi/plugins/sonos.py`
+- **Feature:** Implemented `SonosGroupTogglePlugin` for dynamic grouping.
+- **Logic:** The first device toggled in a session becomes the "Source". Subsequent devices join that source's group. Toggling a member removes it. Toggling the source disbands the group.
+- **Visuals:** Source button turns green, joined members turn yellow, inactive are black.
