@@ -46,18 +46,8 @@ def install_dependencies():
     # Try to install base packages
     run_command(["apt", "install", "-y"] + base_packages)
 
-    # Optional font packages (can vary between Debian versions)
-    # fonts-noto-emoji was renamed to fonts-noto-color-emoji in newer Debian
-    font_packages = [
-        "fonts-noto",
-        "fonts-noto-color-emoji",
-        "fonts-noto-emoji",
-    ]
-
-    print("Installing optional font dependencies...")
-    for pkg in font_packages:
-        # Install individually and don't fail if one is missing
-        run_command(["apt", "install", "-y", pkg], check=False)
+    # Note: Fonts are bundled in assets/fonts/ so we don't need to install 
+    # heavy system-wide fonts-noto packages which can hang on Pi.
 
 
 def install_python_package():
