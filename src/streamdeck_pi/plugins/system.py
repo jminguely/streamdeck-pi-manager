@@ -48,7 +48,9 @@ class CPUInfoPlugin(ButtonPlugin):
 
     def execute(self, button_id: int, context: Dict[str, Any] = None):
         """Get CPU info."""
-        cpu_percent = psutil.cpu_percent(interval=1)
+        # Use interval=None to avoid blocking the thread.
+        # It returns the average since the last call.
+        cpu_percent = psutil.cpu_percent(interval=None)
 
         # Try to get temperature
         try:

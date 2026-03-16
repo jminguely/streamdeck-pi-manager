@@ -1,4 +1,4 @@
-# 🎮 Stream Deck Pi Manager - Getting Started
+# Stream Deck Pi Manager - Getting Started
 
 ## What You Have Now
 
@@ -142,7 +142,7 @@ class MyPlugin(ButtonPlugin):
     name = "My Action"
     description = "Does something cool"
     category = "custom"
-    
+
     def execute(self, button_id, context=None):
         # Your code here
         print(f"Button {button_id} pressed!")
@@ -182,6 +182,6 @@ sudo journalctl -u streamdeck-pi -f   # Logs
 
 ## 🎉 You're Done!
 
-You now have a professional-grade Stream Deck management system. 
+You now have a professional-grade Stream Deck management system.
 
 Next: Deploy it to your Raspberry Pi and start configuring buttons!

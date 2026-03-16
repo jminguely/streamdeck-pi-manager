@@ -242,6 +242,11 @@ async def update_button(
     # Create button action
     action = None
     if config.action_type != "none" and config.plugin_id:
+        # Validate plugin config
+        is_valid, error = plugin_manager.validate_plugin_config(config.plugin_id, config.config)
+        if not is_valid:
+            raise HTTPException(status_code=400, detail=f"Invalid plugin configuration: {error}")
+
         action = ButtonAction(
             type=ButtonActionType(config.action_type),
             plugin_id=config.plugin_id,

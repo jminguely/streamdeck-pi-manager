@@ -22,6 +22,18 @@ class StreamDeckManager:
         self.device_info: Dict[str, Any] = {}
         self.button_callbacks: Dict[int, Callable] = {}
         self._lock = threading.Lock()
+        self._font_cache: Dict[str, ImageFont.FreeTypeFont] = {}
+
+    def _get_font(self, path: str, size: int) -> ImageFont.FreeTypeFont:
+        """Get font from cache or load from disk."""
+        cache_key = f"{path}:{size}"
+        if cache_key not in self._font_cache:
+            try:
+                self._font_cache[cache_key] = ImageFont.truetype(path, size)
+            except Exception as e:
+                logger.error(f"Failed to load font {path}: {e}")
+                raise
+        return self._font_cache[cache_key]
 
     def connect(self) -> bool:
         """
@@ -152,7 +164,7 @@ class StreamDeckManager:
         ]
         for path in text_font_paths:
             try:
-                text_font = ImageFont.truetype(path, font_size)
+                text_font = self._get_font(path, font_size)
                 break
             except:
                 continue
@@ -172,7 +184,7 @@ class StreamDeckManager:
             ]
             for path in icon_font_paths:
                 try:
-                    icon_font = ImageFont.truetype(path, icon_size)
+                    icon_font = self._get_font(path, icon_size)
                     break
                 except:
                     continue

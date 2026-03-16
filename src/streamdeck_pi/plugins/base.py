@@ -2,8 +2,10 @@
 Base plugin class and plugin system.
 """
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, Tuple
 import logging
+from concurrent.futures import ThreadPoolExecutor
+import jsonschema
 
 logger = logging.getLogger(__name__)
 
@@ -71,7 +73,7 @@ class ButtonPlugin(ABC):
             "properties": {}
         }
 
-    def validate_config(self, config: Dict[str, Any]) -> tuple[bool, Optional[str]]:
+    def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
         """
         Validate plugin configuration.
 
@@ -111,6 +113,7 @@ class PluginManager:
         self.plugins: Dict[str, ButtonPlugin] = {}
         self.device_manager = device_manager
         self.global_settings = global_settings or {}
+        self.executor = ThreadPoolExecutor(max_workers=10)
 
     def register_plugin(self, plugin_class: type[ButtonPlugin]):
         """
@@ -155,6 +158,36 @@ class PluginManager:
             for plugin_id, plugin in self.plugins.items()
         }
 
+    def validate_plugin_config(self, plugin_id: str, config: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """
+        Validate configuration for a specific plugin.
+
+        Args:
+            plugin_id: ID of plugin
+            config: Configuration to validate
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        plugin = self.get_plugin(plugin_id)
+        if not plugin:
+            return False, f"Plugin '{plugin_id}' not found"
+
+        # 1. Custom validation
+        is_valid, error = plugin.validate_config(config)
+        if not is_valid:
+            return False, error
+
+        # 2. Schema validation
+        schema = plugin.get_config_schema()
+        if schema:
+            try:
+                jsonschema.validate(instance=config, schema=schema)
+            except jsonschema.exceptions.ValidationError as e:
+                return False, e.message
+
+        return True, None
+
     def execute_plugin(self, plugin_id: str, button_id: int,
                        config: Dict[str, Any] = None, context: Dict[str, Any] = None):
         """
@@ -184,7 +217,7 @@ class PluginManager:
     def tick_plugin(self, plugin_id: str, button_id: int,
                     config: Dict[str, Any] = None, context: Dict[str, Any] = None):
         """
-        Tick a plugin.
+        Tick a plugin in a background thread to avoid blocking the main controller loop.
 
         Args:
             plugin_id: ID of plugin to tick
@@ -197,6 +230,12 @@ class PluginManager:
         if not plugin:
             return
 
+        # Use the executor to run the tick in the background
+        self.executor.submit(self._safe_tick, plugin, button_id, config, context)
+
+    def _safe_tick(self, plugin: ButtonPlugin, button_id: int, 
+                   config: Dict[str, Any] = None, context: Dict[str, Any] = None):
+        """Safely execute plugin tick."""
         # Update plugin config if provided
         if config:
             plugin.config = config
@@ -204,5 +243,5 @@ class PluginManager:
         try:
             plugin.tick(button_id, context or {})
         except Exception as e:
-            # Log error but don't raise to avoid crashing the loop
-            logger.error(f"Error ticking plugin '{plugin_id}': {e}")
+            # Log error but don't raise to avoid crashing the worker thread
+            logger.error(f"Error ticking plugin '{plugin.id}': {e}")

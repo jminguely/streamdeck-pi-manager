@@ -1,6 +1,13 @@
 import requests
-from typing import Dict, Any
+import time
+import threading
+from typing import Dict, Any, Optional
 from streamdeck_pi.plugins.base import ButtonPlugin
+
+# Global state cache shared across plugin instances
+_ha_state_cache: Dict[str, Dict[str, Any]] = {}
+_ha_cache_lock = threading.Lock()
+CACHE_TTL = 2  # Cache for 2 seconds
 
 class HomeAssistantPlugin(ButtonPlugin):
     """Control Home Assistant entities."""
@@ -44,6 +51,43 @@ class HomeAssistantPlugin(ButtonPlugin):
             token = self.global_settings.get("homeassistant", {}).get("token")
 
         return url, token
+
+    def _get_ha_state(self, entity_id: str) -> Optional[Dict[str, Any]]:
+        """Get entity state from cache or HA API."""
+        url, token = self._get_ha_config()
+        if not all([url, token, entity_id]):
+            return None
+
+        with _ha_cache_lock:
+            cached = _ha_state_cache.get(entity_id)
+            if cached and (time.time() - cached["timestamp"] < CACHE_TTL):
+                return cached["data"]
+
+        # If not cached or expired, fetch from API
+        if url.endswith("/"):
+            url = url[:-1]
+
+        api_url = f"{url}/api/states/{entity_id}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+        }
+
+        try:
+            response = requests.get(api_url, headers=headers, timeout=5)
+            response.raise_for_status()
+            data = response.json()
+
+            # Update cache
+            with _ha_cache_lock:
+                _ha_state_cache[entity_id] = {
+                    "timestamp": time.time(),
+                    "data": data
+                }
+            return data
+        except Exception as e:
+            self.logger.error(f"Failed to fetch HA state for {entity_id}: {e}")
+            return None
 
     def execute(self, button_id: int, context: Dict[str, Any] = None):
         """Execute Home Assistant service."""
@@ -117,73 +161,49 @@ class HomeAssistantSensorPlugin(HomeAssistantPlugin):
 
     def execute(self, button_id: int, context: Dict[str, Any] = None):
         """Fetch and display state."""
-        url, token = self._get_ha_config()
         entity_id = self.config.get("entity_id")
         attribute = self.config.get("attribute")
         unit = self.config.get("unit", "")
         label = self.config.get("label", "")
 
-        if not all([url, token, entity_id]):
-            raise ValueError("Missing Home Assistant configuration")
-
-        if url.endswith("/"):
-            url = url[:-1]
-
-        api_url = f"{url}/api/states/{entity_id}"
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
-
-        self.logger.info(f"Fetching state for {entity_id}")
-
-        try:
-            response = requests.get(api_url, headers=headers, timeout=5)
-            response.raise_for_status()
-            state_data = response.json()
-
-            if attribute:
-                value = state_data.get("attributes", {}).get(attribute)
-            else:
-                value = state_data.get("state")
-
-            # Format value (e.g. round float)
-            if isinstance(value, float):
-                value = round(value, 2)
-                # If it's volume (0.0-1.0), maybe multiply by 100?
-                # Let's keep it raw or let user handle it via unit/label,
-                # but for volume specifically, it's often 0-1.
-                # I won't assume volume unless attribute is volume_level
-                if attribute == "volume_level":
-                    value = int(value * 100)
-
-            display_text = f"{value}{unit}"
-            if label:
-                display_text = f"{label}\n{display_text}"
-
-            self.logger.info(f"State: {value}")
-
+        state_data = self._get_ha_state(entity_id)
+        if not state_data:
             if self.device_manager:
-                self.device_manager.set_button_text(
-                    button_id,
-                    display_text,
-                    font_size=context.get("font_size", 14) if context else 14,
-                    bg_color=context.get("bg_color", (0, 0, 0)) if context else (0, 0, 0),
-                    text_color=context.get("text_color", (255, 255, 255)) if context else (255, 255, 255)
-                )
+                self.device_manager.set_button_text(button_id, "Error", text_color=(255, 0, 0))
+            return None
 
-            return value
+        if attribute:
+            value = state_data.get("attributes", {}).get(attribute)
+        else:
+            value = state_data.get("state")
 
-        except Exception as e:
-            self.logger.error(f"Failed to fetch state: {e}")
-            if self.device_manager:
-                 self.device_manager.set_button_text(button_id, "Error", text_color=(255, 0, 0))
-            raise
+        # Format value (e.g. round float)
+        if isinstance(value, float):
+            value = round(value, 2)
+            if attribute == "volume_level":
+                value = int(value * 100)
+
+        display_text = f"{value}{unit}"
+        if label:
+            display_text = f"{label}\n{display_text}"
+
+        self.logger.info(f"State for {entity_id}: {value}")
+
+        if self.device_manager:
+            self.device_manager.set_button_text(
+                button_id,
+                display_text,
+                font_size=context.get("font_size", 14) if context else 14,
+                bg_color=context.get("bg_color", (0, 0, 0)) if context else (0, 0, 0),
+                text_color=context.get("text_color", (255, 255, 255)) if context else (255, 255, 255)
+            )
+
+        return value
 
     def tick(self, button_id: int, context: Dict[str, Any] = None):
         """Update state periodically."""
         try:
             self.execute(button_id, context)
         except Exception:
-            # Errors are already logged in execute
+            # Errors are already logged in execute or _get_ha_state
             pass

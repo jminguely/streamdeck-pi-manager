@@ -33,19 +33,31 @@ def install_dependencies():
     # Update package list
     run_command(["apt", "update"])
 
-    # Install required packages
-    packages = [
+    # Base packages
+    base_packages = [
         "python3-pip",
         "python3-venv",
         "libhidapi-libusb0",
         "libjpeg-dev",
         "zlib1g-dev",
         "libopenjp2-7",
+    ]
+    
+    # Try to install base packages
+    run_command(["apt", "install", "-y"] + base_packages)
+
+    # Optional font packages (can vary between Debian versions)
+    # fonts-noto-emoji was renamed to fonts-noto-color-emoji in newer Debian
+    font_packages = [
         "fonts-noto",
+        "fonts-noto-color-emoji",
         "fonts-noto-emoji",
     ]
 
-    run_command(["apt", "install", "-y"] + packages)
+    print("Installing optional font dependencies...")
+    for pkg in font_packages:
+        # Install individually and don't fail if one is missing
+        run_command(["apt", "install", "-y", pkg], check=False)
 
 
 def install_python_package():
