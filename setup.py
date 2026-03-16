@@ -58,6 +58,7 @@ setup(
         "python-multipart>=0.0.6",
         "pydantic>=2.0.0",
         "pydantic-settings>=2.0.0",
+        "jsonschema>=4.19.0",
         "jinja2>=3.1.0",
         "python-jose[cryptography]>=3.3.0",
         "passlib[bcrypt]>=1.7.4",

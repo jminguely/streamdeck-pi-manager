@@ -35,4 +35,10 @@
 - **Location:** `install.py`
 - **Issue:** The package `fonts-noto-emoji` is not available in newer Debian versions (like Trixie), causing the installation script to fail.
 - **Impact:** Critical for new installations.
-- **Fix:** Handle font packages individually as optional dependencies and added `fonts-noto-color-emoji` to the list.
+- **Fix:** Removed redundant heavy system font dependencies since they are bundled in the project assets.
+
+### 7. Installation: Externally Managed Environment (PEP 668)
+- **Location:** `install.py`
+- **Issue:** Modern Debian versions prevent `pip` from installing into the system Python, causing the installer to fail.
+- **Impact:** Critical for new installations.
+- **Fix:** Redesigned `install.py` to create a dedicated virtual environment in `/opt/streamdeck-pi/venv` and updated the systemd service to use it. This isolates the application dependencies from the system Python.

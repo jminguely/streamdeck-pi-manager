@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Installation script for Stream Deck Pi Manager.
+Updated to use a dedicated virtual environment for better stability.
 """
 import os
 import sys
@@ -8,11 +9,16 @@ import subprocess
 import shutil
 from pathlib import Path
 
+# Constants
+INSTALL_DIR = Path("/opt/streamdeck-pi")
+VENV_DIR = INSTALL_DIR / "venv"
+CONFIG_DIR = Path("/etc/streamdeck-pi")
+PROJECT_ROOT = Path(__file__).parent.absolute()
 
-def run_command(cmd, check=True):
+def run_command(cmd, check=True, cwd=None):
     """Run a shell command."""
-    print(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, check=False)
+    print(f"Running: {' '.join(str(c) for c in cmd)}")
+    result = subprocess.run(cmd, check=False, cwd=cwd)
     if check and result.returncode != 0:
         print(f"Error: Command failed with return code {result.returncode}")
         sys.exit(1)
@@ -46,34 +52,46 @@ def install_dependencies():
     # Try to install base packages
     run_command(["apt", "install", "-y"] + base_packages)
 
-    # Note: Fonts are bundled in assets/fonts/ so we don't need to install 
-    # heavy system-wide fonts-noto packages which can hang on Pi.
+    print("System dependencies installed successfully.")
 
 
-def install_python_package():
-    """Install the Python package."""
-    print("Installing Stream Deck Pi Manager...")
-
-    # Install package
-    run_command([sys.executable, "-m", "pip", "install", "-e", "."])
+def setup_virtual_environment():
+    """Set up a dedicated virtual environment in /opt."""
+    print(f"Setting up virtual environment in {VENV_DIR}...")
+    
+    INSTALL_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # Create venv if it doesn't exist
+    if not VENV_DIR.exists():
+        run_command(["python3", "-m", "venv", str(VENV_DIR)])
+    
+    # Upgrade pip in venv
+    pip_path = VENV_DIR / "bin" / "pip"
+    run_command([str(pip_path), "install", "--upgrade", "pip"])
+    
+    # Install the package in editable mode into the venv
+    print("Installing Stream Deck Pi Manager into virtual environment...")
+    run_command([str(pip_path), "install", "-e", str(PROJECT_ROOT)])
 
 
 def create_config_directory(username):
     """Create configuration directory."""
-    config_dir = Path("/etc/streamdeck-pi")
-    config_dir.mkdir(parents=True, exist_ok=True)
+    CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Copy example config
-    example_config = Path("config/config.example.json")
-    if example_config.exists():
-        shutil.copy(example_config, config_dir / "config.json")
+    # Copy example config if target doesn't exist
+    example_config = PROJECT_ROOT / "config" / "config.example.json"
+    target_config = CONFIG_DIR / "config.json"
+    
+    if example_config.exists() and not target_config.exists():
+        shutil.copy(example_config, target_config)
+        print(f"Created default config at {target_config}")
 
     # Set ownership to the user
-    shutil.chown(config_dir, user=username, group=username)
-    for item in config_dir.glob("*"):
+    shutil.chown(CONFIG_DIR, user=username, group=username)
+    for item in CONFIG_DIR.glob("*"):
         shutil.chown(item, user=username, group=username)
 
-    print(f"Configuration directory created at {config_dir}")
+    print(f"Configuration directory at {CONFIG_DIR} is ready.")
 
 
 def setup_udev_rules():
@@ -108,8 +126,11 @@ def setup_sudo_permissions(username):
 
 
 def create_systemd_service(username):
-    """Create systemd service."""
+    """Create systemd service using the virtual environment."""
     print("Creating systemd service...")
+
+    # Path to the executable in our venv
+    executable_path = VENV_DIR / "bin" / "streamdeck-pi-web"
 
     service_content = f"""[Unit]
 Description=Stream Deck Pi Manager
@@ -118,11 +139,11 @@ After=multi-user.target network.target
 [Service]
 Type=simple
 User={username}
-WorkingDirectory=/home/{username}
-ExecStart=/usr/local/bin/streamdeck-pi-web
+WorkingDirectory={PROJECT_ROOT}
+ExecStart={executable_path}
 Restart=always
 RestartSec=5
-Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PATH={VENV_DIR}/bin:/usr/local/bin:/usr/bin:/bin"
 
 [Install]
 WantedBy=multi-user.target
@@ -135,7 +156,7 @@ WantedBy=multi-user.target
     run_command(["systemctl", "daemon-reload"])
     run_command(["systemctl", "enable", "streamdeck-pi.service"])
 
-    print("Systemd service created and enabled")
+    print("Systemd service created and enabled using virtual environment.")
 
 
 def main():
@@ -151,11 +172,12 @@ def main():
     username = os.environ.get("SUDO_USER", "pi")
 
     print(f"Installing for user: {username}")
+    print(f"Project path: {PROJECT_ROOT}")
     print()
 
     # Installation steps
     install_dependencies()
-    install_python_package()
+    setup_virtual_environment()
     create_config_directory(username)
     setup_udev_rules()
     setup_sudo_permissions(username)
@@ -174,12 +196,6 @@ def main():
     print()
     print("Web interface will be available at:")
     print("  http://your-raspberry-pi-ip:8888")
-    print()
-    print("Default credentials:")
-    print("  Username: admin")
-    print("  Password: streamdeck")
-    print()
-    print("Note: Please change the default password on first login!")
     print()
 
 
